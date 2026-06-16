@@ -10,6 +10,16 @@ export default defineNuxtConfig({
     'nuxt-csurf'
   ],
 
+  runtimeConfig: {
+    public: {
+      apiBase: process.env.BACKEND_URL ?? ''
+    }
+  },
+
+  devServer: {
+    port: 5173
+  },
+
   devtools: {
     enabled: true
   },

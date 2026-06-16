@@ -1,67 +1,20 @@
 <script setup lang="ts">
-import type { DropdownMenuItem } from '@nuxt/ui'
+import { useGetLine } from '@/hooks/useLine'
 
 const { loggedIn, openInPopup } = useUserSession()
-const { renameChat, deleteChat } = useChatActions()
 
 const sidebarOpen = ref(false)
 const searchOpen = ref(false)
 
-const { data: chats, refresh: refreshChats } = await useFetch('/api/chats', {
-  key: 'chats',
-  transform: data => data.map(chat => ({
-    id: chat.id,
-    label: chat.title || 'Untitled',
-    to: `/chat/${chat.id}`,
-    icon: 'i-lucide-message-circle',
-    createdAt: chat.createdAt
-  }))
-})
+const { data } = useGetLine()
 
-onNuxtReady(async () => {
-  const first10 = (chats.value || []).slice(0, 10)
-  for (const chat of first10) {
-    // prefetch the chat and let the browser cache it
-    await $fetch(`/api/chats/${chat.id}`)
-  }
-})
-
-watch(loggedIn, () => {
-  refreshChats()
-
-  sidebarOpen.value = false
-})
-
-const { groups } = useChats(chats)
-
-const items = computed(() => groups.value?.flatMap((group) => {
-  return [{
-    label: group.label,
-    type: 'label' as const
-  }, ...group.items.map(item => ({
-    ...item,
-    slot: 'chat' as const,
-    icon: undefined,
-    class: item.label === 'Untitled' ? 'text-muted' : ''
-  }))]
-}))
-
-function getChatActions(item: { id: string, label: string }): DropdownMenuItem[][] {
-  return [[
-    {
-      label: 'Rename',
-      icon: 'i-lucide-pencil',
-      onSelect: () => renameChat(item.id, item.label === 'Untitled' ? '' : item.label)
-    }
-  ], [
-    {
-      label: 'Delete',
-      icon: 'i-lucide-trash',
-      color: 'error' as const,
-      onSelect: () => deleteChat(item.id)
-    }
-  ]]
-}
+const items = computed(() => (data.value?.data ?? []).map(contact => ({
+  id: contact.id,
+  label: contact.displayName,
+  to: `/chat/${contact.lineUserId}`,
+  avatar: { src: contact.pictureUrl, alt: contact.displayName },
+  slot: 'chat' as const
+})))
 
 defineShortcuts({
   meta_o: () => {
@@ -102,7 +55,7 @@ defineShortcuts({
             icon: 'i-lucide-search',
             kbds: ['meta', 'k'],
             onSelect: () => {
-              searchOpen = true
+              searchOpen.value = true
             }
           }]"
           :collapsed="collapsed"
@@ -131,26 +84,7 @@ defineShortcuts({
             link: 'overflow-hidden pr-7.5',
             linkTrailing: 'translate-x-full group-hover:translate-x-0 group-has-data-[state=open]:translate-x-0 transition-transform ms-0 absolute inset-e-px'
           }"
-        >
-          <template #chat-trailing="{ item }">
-            <UDropdownMenu
-              :items="getChatActions(item as { id: string, label: string })"
-              :content="{ align: 'end' }"
-            >
-              <UButton
-                as="div"
-                icon="i-lucide-ellipsis"
-                color="neutral"
-                variant="link"
-                size="sm"
-                class="rounded-[5px] hover:bg-accented/50 focus-visible:bg-accented/50 data-[state=open]:bg-accented/50"
-                aria-label="Chat actions"
-                tabindex="-1"
-                @click.stop.prevent
-              />
-            </UDropdownMenu>
-          </template>
-        </UNavigationMenu>
+        />
       </template>
 
       <template #footer="{ collapsed }">
@@ -169,7 +103,7 @@ defineShortcuts({
 
     <UDashboardSearch
       v-model:open="searchOpen"
-      placeholder="Search chats..."
+      placeholder="Search contacts..."
       :groups="[{
         id: 'links',
         items: [{
@@ -178,7 +112,10 @@ defineShortcuts({
           icon: 'i-lucide-circle-plus',
           kbds: ['meta', 'o']
         }]
-      }, ...groups]"
+      }, {
+        id: 'contacts',
+        items: items
+      }]"
     />
 
     <div class="flex-1 flex m-4 lg:ml-0 rounded-lg ring ring-default bg-default/75 shadow min-w-0 overflow-hidden">
