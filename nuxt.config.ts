@@ -10,6 +10,12 @@ export default defineNuxtConfig({
     'nuxt-csurf'
   ],
 
+  devtools: {
+    enabled: { enabled: process.env.NODE_ENV !== 'production' }
+  },
+
+  css: ['~/assets/css/main.css'],
+
   runtimeConfig: {
     public: {
       apiBase: process.env.BACKEND_URL ?? ''
@@ -20,32 +26,29 @@ export default defineNuxtConfig({
     port: 5173
   },
 
-  devtools: {
-    enabled: true
-  },
-
-  css: ['~/assets/css/main.css'],
-
-  experimental: {
-    viewTransition: true
-  },
-
   compatibilityDate: '2024-07-11',
 
   nitro: {
-    experimental: {
-      openAPI: true
-    }
-  },
-
-  hub: {
-    db: 'sqlite',
-    blob: true
+    features: {
+      websocket: true
+    },
+    routeRules: {
+      '/socket.io/**': {
+        proxy: 'http://localhost:80/socket.io/**'
+      }
+    },
+    minify: true,
+    sourceMap: false
   },
 
   vite: {
     optimizeDeps: {
-      include: ['striptags']
+      include: [
+        'striptags',
+        'socket.io-client',
+        '@tanstack/vue-db',
+        '@tanstack/vue-query'
+      ]
     }
   },
 

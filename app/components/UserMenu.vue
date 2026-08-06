@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
+import { useAuthLogout, useAuthMe } from '../composables/useAuth'
 
 defineProps<{
   collapsed?: boolean
@@ -7,17 +8,18 @@ defineProps<{
 
 const colorMode = useColorMode()
 const appConfig = useAppConfig()
-const { user, clear } = useUserSession()
+const { data: user } = useAuthMe()
+const { mutate } = useAuthLogout()
 
 const colors = ['red', 'orange', 'amber', 'yellow', 'lime', 'green', 'emerald', 'teal', 'cyan', 'sky', 'blue', 'indigo', 'violet', 'purple', 'fuchsia', 'pink', 'rose']
 const neutrals = ['slate', 'gray', 'zinc', 'neutral', 'stone']
 
 const items = computed<DropdownMenuItem[][]>(() => ([[{
   type: 'label',
-  label: user.value?.name || user.value?.username,
+  label: user.value?.firstName || user.value?.lastName,
   avatar: {
-    src: user.value?.avatar,
-    alt: user.value?.name || user.value?.username
+    src: undefined,
+    alt: user.value?.firstName || user.value?.lastName
   }
 }], [{
   label: 'Theme',
@@ -91,52 +93,10 @@ const items = computed<DropdownMenuItem[][]>(() => ([[{
     }
   }]
 }], [{
-  label: 'Templates',
-  icon: 'i-lucide-layout-template',
-  children: [{
-    label: 'Starter',
-    to: 'https://starter-template.nuxt.dev/'
-  }, {
-    label: 'Landing',
-    to: 'https://landing-template.nuxt.dev/'
-  }, {
-    label: 'Docs',
-    to: 'https://docs-template.nuxt.dev/'
-  }, {
-    label: 'SaaS',
-    to: 'https://saas-template.nuxt.dev/'
-  }, {
-    label: 'Dashboard',
-    to: 'https://dashboard-template.nuxt.dev/'
-  }, {
-    label: 'Chat',
-    to: 'https://chat-template.nuxt.dev/',
-    color: 'primary',
-    checked: true,
-    type: 'checkbox'
-  }, {
-    label: 'Portfolio',
-    to: 'https://portfolio-template.nuxt.dev/'
-  }, {
-    label: 'Changelog',
-    to: 'https://changelog-template.nuxt.dev/'
-  }]
-}], [{
-  label: 'Documentation',
-  icon: 'i-lucide-book-open',
-  to: 'https://ui.nuxt.com/docs/getting-started/installation/nuxt',
-  target: '_blank'
-}, {
-  label: 'GitHub repository',
-  icon: 'i-simple-icons-github',
-  to: 'https://github.com/nuxt-ui-templates/chat',
-  target: '_blank'
-}], [{
   label: 'Log out',
   icon: 'i-lucide-log-out',
   onSelect() {
-    clear()
-    navigateTo('/')
+    mutate()
   }
 }]]))
 </script>
@@ -149,12 +109,12 @@ const items = computed<DropdownMenuItem[][]>(() => ([[{
   >
     <UButton
       v-bind="{
-        label: collapsed ? undefined : (user?.name || user?.username),
-        trailingIcon: collapsed ? undefined : 'i-lucide-chevrons-up-down'
+        label: collapsed ? undefined : (user?.firstName || user?.lastName),
+        trailingIcon: collapsed ? undefined : 'i-lucide-chevrons-up-down',
       }"
       :avatar="{
-        src: user?.avatar || undefined,
-        alt: user?.name || user?.username
+        src: undefined,
+        alt: user?.firstName || user?.lastName
       }"
       color="neutral"
       variant="ghost"
@@ -162,7 +122,8 @@ const items = computed<DropdownMenuItem[][]>(() => ([[{
       :square="collapsed"
       class="data-[state=open]:bg-elevated"
       :ui="{
-        trailingIcon: 'text-dimmed'
+        trailingIcon: 'text-dimmed',
+        leadingAvatar: 'size-7 shrink-0'
       }"
     />
 

@@ -1,155 +1,90 @@
 <script setup lang="ts">
-const input = ref('')
-const loading = ref(false)
-const chatId = crypto.randomUUID()
+import type { NavigationMenuItem } from '@nuxt/ui'
+import { useAuthMe } from '../composables/useAuth'
 
-const { user } = useUserSession()
-
-const greeting = computed(() => {
-  const hour = new Date().getHours()
-  let timeGreeting = 'Good evening'
-  if (hour < 12) timeGreeting = 'Good morning'
-  else if (hour < 18) timeGreeting = 'Good afternoon'
-
-  const name = user.value?.name?.split(' ')[0] || user.value?.username
-
-  return name ? `${timeGreeting}, ${name}` : `${timeGreeting}`
-})
-
-const {
-  dropzoneRef,
-  dragging,
-  open,
-  files,
-  uploading,
-  uploadedFiles,
-  removeFile,
-  clearFiles
-} = useFileUploadWithStatus(chatId)
-
-const { csrf, headerName } = useCsrf()
-
-async function createChat(prompt: string) {
-  input.value = prompt
-  loading.value = true
-
-  const parts: Array<{ type: string, text?: string, mediaType?: string, url?: string }> = [{ type: 'text', text: prompt }]
-
-  if (uploadedFiles.value.length > 0) {
-    parts.push(...uploadedFiles.value)
-  }
-
-  const chat = await $fetch('/api/chats', {
-    method: 'POST',
-    headers: { [headerName]: csrf },
-    body: {
-      id: chatId,
-      message: {
-        role: 'user',
-        parts
-      }
-    }
-  })
-
-  refreshNuxtData('chats')
-  navigateTo(`/chat/${chat?.id}`)
-}
-
-async function onSubmit() {
-  await createChat(input.value)
-  clearFiles()
-}
-
-const quickChats = [
+const items: NavigationMenuItem[] = [
   {
-    label: 'Why use Nuxt UI?',
-    icon: 'i-logos-nuxt-icon'
+    label: 'Line',
+    to: 'https://go.nuxt.com/figma-ui',
+    target: '_blank'
   },
   {
-    label: 'Help me create a Vue composable',
-    icon: 'i-logos-vue'
+    label: 'Playground',
+    to: 'https://stackblitz.com/edit/nuxt-ui',
+    target: '_blank'
   },
   {
-    label: 'Tell me more about UnJS',
-    icon: 'i-logos-unjs'
-  },
-  {
-    label: 'Why should I consider VueUse?',
-    icon: 'i-logos-vueuse'
-  },
-  {
-    label: 'Tailwind CSS best practices',
-    icon: 'i-logos-tailwindcss-icon'
-  },
-  {
-    label: 'What is the weather in Bordeaux?',
-    icon: 'i-lucide-sun'
-  },
-  {
-    label: 'Show me a chart of sales data',
-    icon: 'i-lucide-line-chart'
+    label: 'Releases',
+    to: 'https://github.com/nuxt/ui/releases',
+    target: '_blank'
   }
 ]
+
+definePageMeta({
+  layout: false
+})
+const { data, isSuccess } = useAuthMe()
 </script>
 
 <template>
-  <UDashboardPanel
-    id="home"
-    class="min-h-0"
-    :ui="{ body: 'p-0 sm:p-0' }"
-  >
-    <template #header>
-      <Navbar />
-    </template>
+  <div class="relative flex min-h-screen flex-col bg-default">
+    <Navbar class="fixed inset-x-0 top-0 z-50" :toggle="false" />
 
-    <template #body>
-      <div ref="dropzoneRef" class="flex flex-1">
-        <DragDropOverlay :show="dragging" />
+    <main class="flex flex-1">
+      <UPageHero
+        title="PCM Chat"
+        description="A production-ready starter template powered by Nuxt UI. Build beautiful, accessible, and performant applications in minutes, not hours."
+        :links="[
+          {
+            label: 'Chat',
+            trailingIcon: 'i-lucide-arrow-right',
+            size: 'xl',
+            onClick: () => { navigateTo((data && isSuccess)? '/chat' : '/login') }
+          }
+        ]"
+        class="flex flex-1 items-center justify-center"
+      >
+        <StarsBg :star-count="500" />
+      </UPageHero>
+    </main>
+    <USeparator
+      icon="i-simple-icons-nuxtdotjs"
+      type="dashed"
+    />
 
-        <UContainer class="flex-1 flex flex-col justify-center gap-4 sm:gap-6 py-8">
-          <h1 class="text-3xl sm:text-4xl text-highlighted font-bold">
-            {{ greeting }}
-          </h1>
+    <UFooter>
+      <template #left>
+        <p class="text-sm text-muted">
+          Copyright © {{ new Date().getFullYear() }}
+        </p>
+      </template>
 
-          <UChatPrompt
-            v-model="input"
-            :status="loading ? 'streaming' : 'ready'"
-            :disabled="uploading"
-            class="[view-transition-name:chat-prompt]"
-            variant="subtle"
-            :ui="{ base: 'px-1.5' }"
-            @submit="onSubmit"
-          >
-            <template v-if="files.length > 0" #header>
-              <ChatFiles :files="files" @remove="removeFile" />
-            </template>
+      <UNavigationMenu
+        :items="items"
+        variant="link"
+      />
 
-            <template #footer>
-              <div class="flex items-center gap-1">
-                <ChatFileUploadButton :open="open" />
-
-                <ModelSelect />
-              </div>
-
-              <UChatPromptSubmit color="neutral" size="sm" :disabled="uploading" />
-            </template>
-          </UChatPrompt>
-
-          <div class="flex flex-wrap gap-2">
-            <UButton
-              v-for="quickChat in quickChats"
-              :key="quickChat.label"
-              :icon="quickChat.icon"
-              :label="quickChat.label"
-              size="sm"
-              color="neutral"
-              variant="outline"
-              class="rounded-full"
-              @click="createChat(quickChat.label)"
-            />
-          </div>
-        </UContainer>
-      </div>
-    </template>
-  </UDashboardPanel>
+      <template #right>
+        <UButton
+          icon="i-simple-icons-discord"
+          color="neutral"
+          variant="ghost"
+          to="https://go.nuxt.com/discord"
+          target="_blank"
+        /> <UButton
+          icon="i-simple-icons-x"
+          color="neutral"
+          variant="ghost"
+          to="https://go.nuxt.com/x"
+          target="_blank"
+        /> <UButton
+          icon="i-simple-icons-github"
+          color="neutral"
+          variant="ghost"
+          to="https://github.com/nuxt/nuxt"
+          target="_blank"
+        />
+      </template>
+    </UFooter>
+  </div>
 </template>

@@ -1,145 +1,133 @@
 <script setup lang="ts">
-import { useGetMessageBySenderId } from '@/hooks/useMessage'
-import { useLinePushMessage } from '@/hooks/useWebhook'
+import { useQueryClient } from '@tanstack/vue-query'
+import { useGetConversationById } from '../../composables/useConversation'
+import { useFaceBookPushMessage, useLinePushMessage } from '../../composables/useWebhook'
+import { useWebsocket } from '../../composables/useWebsocket'
+import { useAuthMe } from '../../composables/useAuth'
+import type { ConversationById } from '~/types/conversation'
+import type { UIMessage } from 'ai'
+
+definePageMeta({
+  middleware: ['auth']
+})
 
 const route = useRoute()
 const input = ref('')
+const id = (route.params.id as string) ?? ''
 
-const { mutate } = useLinePushMessage()
+const { mutate: pushLineMsg } = useLinePushMessage()
+const { mutate: pushFaceMsg } = useFaceBookPushMessage()
+const { newMessage } = useWebsocket()
+const queryClient = useQueryClient()
 
-async function onSubmit() {
-  console.log(input.value)
-  mutate({
-    message: input.value,
-    lineUserId: route.params.id as string
-  })
+const { data } = useGetConversationById(id)
+const { data: me } = useAuthMe()
+
+watch(newMessage, (newMsg) => {
+  if (!newMsg) return
+  queryClient.invalidateQueries({ queryKey: ['conversations'] })
+  queryClient.setQueryData<ConversationById>(
+    ['conversationById', newMsg.conversationId], (old) => {
+      if (!old) return
+      return {
+        ...old,
+        messages: [...(old.messages ?? []), newMsg]
+      }
+    }
+  )
+})
+
+function onSubmit() {
+  if (!input.value.trim() || !data.value || !me.value) return
+
+  const contact = data.value.contact
+  if (contact.contactPlatform === 'line') {
+    pushLineMsg({
+      message: input.value,
+      customerId: contact.customerId,
+      conversationId: id,
+      adminId: me.value.id
+    })
+  } else {
+    pushFaceMsg({
+      recipient: {
+        id: contact.customerId
+      },
+      messaging_type: 'RESPONSE',
+      message: {
+        text: input.value
+      },
+      conversationId: id,
+      adminId: me.value.id
+    })
+  }
   input.value = ''
 }
+const messages = computed(() => {
+  const contact = data.value?.contact
+  if (!contact) return []
 
-const { data } = useGetMessageBySenderId((route.params.id as string) ?? '')
-const messages = computed(() =>
-  (data.value ?? []).map(msg => ({
+  return (data.value?.messages ?? []).map(msg => ({
     id: String(msg.id),
-    role: 'assistant',
-    parts: [
-      {
-        type: 'text',
-        text: msg.content
-      }
-    ]
+    role: msg.senderType === 'admin' ? 'assistant' : 'user',
+    parts: [{ type: 'text', text: msg.content }],
+    date: msg.timestamp,
+    avatar: msg.senderType !== 'admin' && contact.pictureUrl
+      ? { src: contact.pictureUrl }
+      : undefined
   }))
-)
+})
+
+const bottomRef = ref<HTMLElement | null>(null)
+
+watch(() => messages.value.length, () => {
+  nextTick(() => bottomRef.value?.scrollIntoView({ behavior: 'smooth' }))
+})
 </script>
 
 <template>
   <UDashboardPanel
     id="chat"
-    class="relative min-h-0"
-    :ui="{ body: 'p-0 sm:p-0 overscroll-none' }"
+    class="relative min-h-full"
+    :ui="{ body: 'p-0 sm:p-0 pt-4 overscroll-none' }"
   >
     <template #header>
       <Navbar>
         <template #title>
-          <ChatTitle
-            :chat-id="1"
-            :title="title"
-            :is-owner="isOwner"
-            @update:title="title = $event"
-          />
+          <ChatTitle :chat-id="id" :is-owner="false" />
         </template>
-
-<!--        <ChatVisibility-->
-<!--          v-if="isOwner"-->
-<!--          :chat-id="data!.id"-->
-<!--          :visibility="visibility"-->
-<!--          @update:visibility="visibility = $event"-->
-<!--        />-->
       </Navbar>
     </template>
+
     <template #body>
-<!--      <UContainer>-->
-<!--        <UChatPrompt v-model="input" @submit="onSubmit">-->
-<!--          <UChatPromptSubmit :status="chat.status" />-->
-<!--        </UChatPrompt>-->
-<!--      </UContainer>-->
-      <div class="flex flex-1">
-        <DragDropOverlay :show="dragging" />
-        <UContainer class="flex-1 flex flex-col gap-4 sm:gap-6">
-          <UChatMessages
-            should-auto-scroll
-            :messages="messages"
-            class="pt-(--ui-header-height) pb-4 sm:pb-6"
-            :assistant="{
-              variant: 'outline',
-              avatar: {
-                icon: 'i-lucide-bot'
-              }
-            }"
-          >
-            <template #indicator>
-              <div class="flex items-center gap-1.5">
-                <ChatIndicator />
+      <UContainer class="flex flex-col gap-4 sm:gap-6 min-h-full">
+        <UChatMessages
+          :messages="messages as UIMessage[]"
+          class="pt-(--ui-header-height)"
+          :spacing-offset="160"
+          :assistant="{ side: 'right', variant: 'soft' }"
+          :user="{ side: 'left', variant: 'outline' }"
+        >
+          <template #header="{ message }">
+            <NuxtTime
+              :datetime="(message as any).date"
+              time-style="short"
+              class="text-xs text-gray-400"
+            />
+          </template>
+        </UChatMessages>
 
-                <UChatShimmer text="Thinking..." class="text-sm" />
-              </div>
-            </template>
+        <div ref="bottomRef" />
 
-            <template #files="{ message, parts }">
-              <ChatFilePreview
-                v-for="(part, index) in parts"
-                :key="`${message.id}-${index}`"
-                :name="getFileName(part.url)"
-                :type="part.mediaType"
-                :preview-url="part.url"
-                size="3xl"
-              />
-            </template>
-
-            <template #content="{ message }">
-              <ChatMessageContent
-                :message="message"
-                :editing="isOwner && editingMessageId === message.id"
-                @save="saveEdit"
-                @cancel-edit="editingMessageId = null"
-              />
-            </template>
-
-            <template #actions>
-              <ChatMessageActions
-                :message="messages"
-              />
-            </template>
-          </UChatMessages>
-
-          <UChatPrompt
-            v-model="input"
-            variant="subtle"
-            class="sticky bottom-0 [view-transition-name:chat-prompt] rounded-b-none z-10"
-            :ui="{ base: 'px-1.5' }"
-            @submit="onSubmit"
-          >
-<!--            <template v-if="files.length > 0" #header>-->
-<!--              <ChatFiles :files="files" @remove="removeFile" />-->
-<!--            </template>-->
-
-            <template #footer>
-              <div class="flex items-center gap-1">
-                <ChatFileUploadButton :open="open" />
-
-                <ModelSelect />
-              </div>
-
-              <UChatPromptSubmit
-                :disabled="uploading"
-                color="neutral"
-                size="sm"
-                @stop="chat.stop()"
-                @reload="chat.regenerate()"
-              />
-            </template>
-          </UChatPrompt>
-        </UContainer>
-      </div>
+        <UChatPrompt
+          v-model="input"
+          variant="subtle"
+          class="sticky bottom-0 [view-transition-name:chat-prompt] rounded-b-none z-10"
+          @submit="onSubmit"
+        >
+          <UChatPromptSubmit color="neutral" size="sm" />
+        </UChatPrompt>
+      </UContainer>
     </template>
   </UDashboardPanel>
 </template>
