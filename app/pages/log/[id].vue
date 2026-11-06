@@ -18,20 +18,33 @@ type MessageResType = {
   admin: string
   email: string
   content: string
+  fileUrl?: string
   date: Date | string
 }
 
 const messages = computed<MessageResType[]>(() => (data.value?.massages ?? []).map(c => ({
   id: c.id,
-  admin: `${c.admin.firstName} ${c.admin.lastName}`,
-  email: c.admin.email,
-  content: c.content,
+  admin: c.admin ? `${c.admin.firstName ?? ''} ${c.admin.lastName ?? ''}`.trim() : '-',
+  email: c.admin?.email ?? '-',
+  content: messageLogText(c),
+  fileUrl: c.file?.path,
   date: c.timestamp
 })))
 
 const columns: TableColumn<MessageResType>[] = [
   { accessorKey: 'id', header: 'Id', cell: ({ row }) => `${row.getValue('id')}` },
-  { accessorKey: 'content', header: 'Content', cell: ({ row }) => `${row.getValue('content')}` },
+  {
+    accessorKey: 'content',
+    header: 'Content',
+    cell: ({ row }) => {
+      const text = `${row.getValue('content')}`
+      // Attachments: show the file name as a link to the file.
+      const url = row.original.fileUrl
+      return url
+        ? h('a', { href: url, target: '_blank', rel: 'noopener', class: 'text-primary hover:underline' }, text)
+        : text
+    }
+  },
   { accessorKey: 'email', header: 'Email', cell: ({ row }) => `${row.getValue('email')}` },
   { accessorKey: 'admin', header: 'Admin', cell: ({ row }) => `${row.getValue('admin')}` },
   {

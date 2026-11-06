@@ -19,7 +19,7 @@ useAssignAlerts()
 const items = computed(() => (conversations.value?.data ?? []).map(c => ({
   id: c.id,
   label: c.contact.displayName,
-  description: c.lastMessage.content,
+  description: messagePreview(c.lastMessage),
   senderType: c.lastMessage.senderType === 'admin' ? 'You' : '',
   to: `/chat/${c.id}`,
   avatar: { src: c.contact.pictureUrl, alt: c.contact.displayName },

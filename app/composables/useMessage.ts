@@ -8,7 +8,8 @@ export const useMessageByConversationId = (conversationId: string, page: Ref<num
     queryFn: () => $api<MessageByConversationIdArray>(`/messages/${conversationId}`, {
       query: {
         page: page.value,
-        limit: limit.value
+        limit: limit.value,
+        senderType: 'admin'
       }
     }),
     placeholderData: previousData => previousData

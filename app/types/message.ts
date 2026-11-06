@@ -2,6 +2,16 @@ import * as z from 'zod'
 import { SenderTypeEnum } from '~/types/enums/sender.enum'
 import { UserSchema } from '~/types/user'
 import { platformEnum } from '~/types/enums/platform.enum'
+import { MessageTypeEnum } from '~/types/enums/message-type.enum'
+import { FileSchema } from '~/types/file'
+
+// Media fields shared by every message shape.
+// content = text, original file name (file) or sticker image URL (sticker).
+const MediaFields = {
+  messageType: MessageTypeEnum.default('text'),
+  fileId: z.string().nullable().optional(),
+  file: FileSchema.nullable().optional()
+}
 
 export const MessageSchema = z.object({
   id: z.number(),
@@ -11,17 +21,19 @@ export const MessageSchema = z.object({
   senderType: SenderTypeEnum,
   displayName: z.string(),
   pictureUrl: z.string(),
-  timestamp: z.string()
+  timestamp: z.string(),
+  ...MediaFields
 })
 
 export const MessageByConversationIdSchema = z.object({
   id: z.string(),
   content: z.string(),
-  adminId: z.number(),
-  admin: UserSchema,
+  adminId: z.number().nullable(),
+  admin: UserSchema.nullable(),
   messagePlatform: platformEnum,
   senderType: SenderTypeEnum,
-  timestamp: z.coerce.date()
+  timestamp: z.coerce.date(),
+  ...MediaFields
 })
 
 export const MessageByConversationIdArraySchema = z.object({

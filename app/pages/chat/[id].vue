@@ -2,6 +2,7 @@
 import { useQueryClient } from '@tanstack/vue-query'
 import { useGetConversationById } from '../../composables/useConversation'
 import { useFaceBookPushMessage, useLinePushMessage } from '../../composables/useWebhook'
+import { useUploadFile } from '../../composables/useFile'
 import { useWebsocket } from '../../composables/useWebsocket'
 import { useAuthMe } from '../../composables/useAuth'
 import { useConversationReadEvents, useGetConversationReaders, useMarkConversationRead } from '../../composables/useConversationRead'
@@ -17,8 +18,10 @@ const route = useRoute()
 const input = ref('')
 const id = (route.params.id as string) ?? ''
 
-const { mutate: pushLineMsg } = useLinePushMessage()
-const { mutate: pushFaceMsg } = useFaceBookPushMessage()
+const { mutateAsync: pushLineMsg } = useLinePushMessage()
+const { mutateAsync: pushFaceMsg } = useFaceBookPushMessage()
+const { mutateAsync: uploadFile } = useUploadFile()
+const toast = useToast()
 const { newMessage } = useWebsocket()
 const queryClient = useQueryClient()
 
@@ -39,31 +42,88 @@ watch(newMessage, (newMsg) => {
   )
 })
 
-function onSubmit() {
-  if (!input.value.trim() || !data.value || !me.value) return
+// ---------- attachment ----------
+const fileInput = ref<HTMLInputElement | null>(null)
+const pendingFile = ref<File | null>(null)
+const pendingPreview = ref<string | null>(null)
+const sending = ref(false)
+
+const accept = ACCEPTED_FILES
+
+function setPendingFile(file: File | null) {
+  if (pendingPreview.value) URL.revokeObjectURL(pendingPreview.value)
+  pendingFile.value = file
+  pendingPreview.value = file?.type.startsWith('image/') ? URL.createObjectURL(file) : null
+}
+
+function onFilePicked(event: Event) {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  target.value = '' // allow picking the same file again
+  if (!file) return
+
+  if (!isAcceptedFile(file, accept)) {
+    toast.add({
+      title: 'File type not supported',
+      description: 'Please choose an image, video, audio or document file.',
+      color: 'error'
+    })
+    return
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    toast.add({ title: 'File too large', description: `Max ${formatBytes(MAX_UPLOAD_BYTES)}.`, color: 'error' })
+    return
+  }
+  setPendingFile(file)
+}
+
+onBeforeUnmount(() => setPendingFile(null))
+
+async function onSubmit() {
+  const text = input.value.trim()
+  if ((!text && !pendingFile.value) || !data.value || !me.value || sending.value) return
 
   const contact = data.value.contact
-  if (contact.contactPlatform === 'line') {
-    pushLineMsg({
-      message: input.value,
-      customerId: contact.customerId,
-      conversationId: id,
-      adminId: me.value.id
+  sending.value = true
+  try {
+    const fileId = pendingFile.value
+      ? (await uploadFile(pendingFile.value)).file.id
+      : undefined
+
+    if (contact.contactPlatform === 'line') {
+      await pushLineMsg({
+        message: text || undefined,
+        fileId,
+        fileName: pendingFile.value?.name,
+        customerId: contact.customerId,
+        conversationId: id,
+        adminId: me.value.id
+      })
+    } else {
+      await pushFaceMsg({
+        recipient: {
+          id: contact.customerId
+        },
+        messaging_type: 'RESPONSE',
+        message: text ? { text } : undefined,
+        fileId,
+        fileName: pendingFile.value?.name,
+        conversationId: id,
+        adminId: me.value.id
+      })
+    }
+    input.value = ''
+    setPendingFile(null)
+  } catch (error) {
+    const data = (error as { data?: { message?: string, errors?: Record<string, string> } }).data
+    toast.add({
+      title: 'Message not sent',
+      description: data?.message ?? Object.values(data?.errors ?? {})[0] ?? 'Please try again.',
+      color: 'error'
     })
-  } else {
-    pushFaceMsg({
-      recipient: {
-        id: contact.customerId
-      },
-      messaging_type: 'RESPONSE',
-      message: {
-        text: input.value
-      },
-      conversationId: id,
-      adminId: me.value.id
-    })
+  } finally {
+    sending.value = false
   }
-  input.value = ''
 }
 const messages = computed(() => {
   const contact = data.value?.contact
@@ -72,7 +132,8 @@ const messages = computed(() => {
   return (data.value?.messages ?? []).map(msg => ({
     id: String(msg.id),
     role: msg.senderType === 'admin' ? 'assistant' : 'user',
-    parts: [{ type: 'text', text: msg.content }],
+    parts: [{ type: 'text', text: messagePreview(msg) }],
+    raw: msg,
     date: msg.timestamp,
     avatar: msg.senderType !== 'admin' && contact.pictureUrl
       ? { src: contact.pictureUrl }
@@ -151,6 +212,10 @@ watch([() => lastMessage.value?.id, visibility], ([lastId, state]) => {
               class="text-xs text-gray-400"
             />
           </template>
+
+          <template #content="{ message }">
+            <ChatMessageMedia :message="(message as any).raw" />
+          </template>
         </UChatMessages>
 
         <ChatSeenBy
@@ -167,15 +232,71 @@ watch([() => lastMessage.value?.id, visibility], ([lastId, state]) => {
           ref="prompt"
           v-model="input"
           variant="subtle"
-          :ui="{ base: 'ps-11.5', leading: 'items-center', trailing: 'items-center' }"
+          :disabled="sending"
+          :ui="{ base: 'ps-20', leading: 'items-center gap-0', trailing: 'items-center' }"
           class="sticky bottom-0 [view-transition-name:chat-prompt] rounded-b-none z-10"
           @submit="onSubmit"
         >
-          <template #leading>
-            <ChatEmojiPicker @select="insertEmoji" />
+          <template v-if="pendingFile" #header>
+            <div class="flex items-center gap-3 rounded-md border border-default bg-default p-2 max-w-sm">
+              <img
+                v-if="pendingPreview"
+                :src="pendingPreview"
+                alt="Selected image"
+                class="size-12 rounded object-cover"
+              >
+              <UIcon v-else name="i-lucide-file-text" class="size-8 text-primary shrink-0" />
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm">
+                  {{ pendingFile.name }}
+                </p>
+                <p class="text-xs text-muted">
+                  {{ sending ? 'Sending…' : formatBytes(pendingFile.size) }}
+                </p>
+              </div>
+              <UButton
+                icon="i-lucide-x"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                aria-label="Remove attachment"
+                :disabled="sending"
+                @click="setPendingFile(null)"
+              />
+            </div>
           </template>
 
-          <UChatPromptSubmit color="neutral" size="sm" />
+          <template #leading>
+            <ChatEmojiPicker @select="insertEmoji" />
+            <UTooltip :text="data?.contact.contactPlatform === 'line' ? 'Attach file (non-images are sent to LINE as a link)' : 'Attach file'">
+              <UButton
+                icon="i-lucide-paperclip"
+                variant="ghost"
+                color="neutral"
+                size="sm"
+                aria-label="Attach file"
+                :disabled="sending"
+                @click="fileInput?.click()"
+              />
+            </UTooltip>
+            <input
+              ref="fileInput"
+              type="file"
+              class="hidden"
+              :accept="accept"
+              @change="onFilePicked"
+            >
+          </template>
+
+          <!-- type=button + click: UChatPrompt drops submits with empty text,
+               but a file can be sent without text. -->
+          <UChatPromptSubmit
+            type="button"
+            color="neutral"
+            size="sm"
+            :disabled="sending || (!input.trim() && !pendingFile)"
+            @click="onSubmit"
+          />
         </UChatPrompt>
       </UContainer>
     </template>
