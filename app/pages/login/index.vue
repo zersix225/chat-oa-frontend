@@ -1,23 +1,8 @@
 <script setup lang="ts">
-import type { ButtonProps, AuthFormField, FormSubmitEvent } from '@nuxt/ui'
-import { useAuthLogin, useAuthMe } from '../../composables/useAuth'
+import type { AuthFormField, FormSubmitEvent } from '@nuxt/ui'
+import { useAuthLogin } from '../../composables/useAuth'
 import * as z from 'zod'
-import { createCollection, localStorageCollectionOptions } from '@tanstack/vue-db'
 
-const providers = ref<ButtonProps[]>([
-  {
-    label: 'Google',
-    icon: 'i-simple-icons-google',
-    color: 'neutral',
-    variant: 'subtle'
-  },
-  {
-    label: 'GitHub',
-    icon: 'i-simple-icons-github',
-    color: 'neutral',
-    variant: 'subtle'
-  }
-])
 const fields = ref<AuthFormField[]>([
   {
     name: 'email',
@@ -31,20 +16,11 @@ const fields = ref<AuthFormField[]>([
   }
 ])
 
-// const input = ref<{ email: string, password: string } | null>(null)
-//
-// function onSubmit() {
-//   if (!input.value) return
-//   console.log(input.value)
-//
-//   const { mutate } = useAuthLogin()
-//   mutate({ email: input.value.email, password: input.value.password })
-// }
 const { mutate } = useAuthLogin()
 
 const schema = z.object({
   email: z.email('Invalid email'),
-  password: z.string('Password is required').min(8, 'Must be at least 8 characters')
+  password: z.string('Password is required').min(1, 'Password is required')
 })
 
 type Schema = z.output<typeof schema>
@@ -60,7 +36,7 @@ definePageMeta({
 
 <template>
   <UAuthForm
-    v-model="input"
+    :schema="schema"
     title="Login"
     description="Enter your credentials to access your account."
     :fields="fields"

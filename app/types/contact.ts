@@ -1,5 +1,5 @@
 import * as z from 'zod'
-import { platformEnum} from '~/types/enums/platform.enum'
+import { platformEnum } from '~/types/enums/platform.enum'
 
 export const ContactSchema = z.object({
   pictureUrl: z.string(),

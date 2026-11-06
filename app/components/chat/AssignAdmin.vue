@@ -1,56 +1,58 @@
 <script setup lang="ts">
-// UI only — not connected to the backend yet.
-// TODO: replace mock admins and local state with API calls.
+import { useAssignConversation, useGetConversationById } from '~/composables/useConversation'
+import { useGetAdmins, userDisplayName } from '~/composables/useUser'
+import { useAuthMe } from '~/composables/useAuth'
 
-interface Admin {
-  id: number
-  name: string
-  email: string
-  avatar?: string
-}
+const props = defineProps<{ chatId: string }>()
 
-const admins: Admin[] = [
-  { id: 1, name: 'Admin One', email: 'admin1@example.com' },
-  { id: 2, name: 'Admin Two', email: 'admin2@example.com' },
-  { id: 3, name: 'Admin Three', email: 'admin3@example.com' }
-]
-
-const meId = 1
+const { data: conversation } = useGetConversationById(props.chatId)
+const { data: admins, isPending: adminsPending } = useGetAdmins()
+const { data: me } = useAuthMe()
+const { mutate: assign, isPending: assigning } = useAssignConversation(props.chatId)
 
 const open = ref(false)
-const assigneeId = ref<number | null>(null)
 
-const assignee = computed(() => admins.find(a => a.id === assigneeId.value) ?? null)
+const assigneeId = computed(() => conversation.value?.assigneeId ?? null)
 
-const groups = computed(() => [
-  {
-    id: 'actions',
-    items: [
-      ...(assigneeId.value !== meId
-        ? [{ label: 'Assign to me', icon: 'i-lucide-user-round-plus', onSelect: () => select(meId) }]
-        : []),
-      ...(assigneeId.value
-        ? [{ label: 'Unassign', icon: 'i-lucide-user-round-x', color: 'error' as const, onSelect: () => select(null) }]
-        : [])
-    ]
-  },
-  {
-    id: 'admins',
-    label: 'Admins',
-    items: admins.map(admin => ({
-      label: admin.name,
-      suffix: admin.email,
-      avatar: { src: admin.avatar, alt: admin.name },
-      active: admin.id === assigneeId.value,
-      trailingIcon: admin.id === assigneeId.value ? 'i-lucide-check' : undefined,
-      onSelect: () => select(admin.id)
-    }))
-  }
-].filter(g => g.items.length))
+const assignee = computed(() =>
+  conversation.value?.assignee
+  ?? admins.value?.data.find(u => u.id === assigneeId.value)
+  ?? null
+)
+
+const groups = computed(() => {
+  const myId = me.value?.id
+  return [
+    {
+      id: 'actions',
+      items: [
+        ...(myId && !assigneeId.value
+          ? [{ label: 'Assign to me', icon: 'i-lucide-user-round-plus', onSelect: () => select(myId) }]
+          : []),
+        ...(assigneeId.value
+          ? [{ label: 'Unassign', icon: 'i-lucide-user-round-x', color: 'error' as const, onSelect: () => select(null) }]
+          : [])
+      ]
+    },
+    {
+      id: 'admins',
+      label: 'Admins',
+      items: (admins.value?.data ?? []).map(admin => ({
+        label: userDisplayName(admin),
+        suffix: admin.email ?? undefined,
+        avatar: { src: admin.photo?.path, alt: userDisplayName(admin) },
+        active: admin.id === assigneeId.value,
+        trailingIcon: admin.id === assigneeId.value ? 'i-lucide-check' : undefined,
+        onSelect: () => select(admin.id)
+      }))
+    }
+  ].filter(g => g.items.length)
+})
 
 function select(id: number | null) {
   open.value = false
-  assigneeId.value = id
+  if (id === assigneeId.value) return
+  assign(id)
 }
 </script>
 
@@ -60,9 +62,10 @@ function select(id: number | null) {
       color="neutral"
       variant="ghost"
       size="sm"
-      :avatar="assignee ? { src: assignee.avatar, alt: assignee.name } : undefined"
+      :loading="assigning"
+      :avatar="assignee ? { src: assignee.photo?.path, alt: userDisplayName(assignee) } : undefined"
       :icon="assignee ? undefined : 'i-lucide-user-round-plus'"
-      :label="assignee ? assignee.name : 'Assign'"
+      :label="assignee ? userDisplayName(assignee) : 'Assign'"
       trailing-icon="i-lucide-chevron-down"
       class="max-w-48"
       :ui="{ label: 'truncate' }"
@@ -71,8 +74,9 @@ function select(id: number | null) {
     <template #content>
       <UCommandPalette
         :groups="groups"
+        :loading="adminsPending"
         placeholder="Search admins..."
-        class="h-80 w-72"
+        class="h-auto max-h-80 w-72"
       />
     </template>
   </UPopover>

@@ -1,18 +1,11 @@
-import {useMutation, useQuery, useQueryClient} from '@tanstack/vue-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import type { ConversationArray, ConversationById } from '~/types/conversation'
-import { authTokenCollection } from '~/utils/auth.local'
 
 export function useGetConversationById(id: string) {
-  const config = useRuntimeConfig()
-  const token = authTokenCollection.get('app-token')
+  const { $api } = useNuxtApp()
   return useQuery({
     queryKey: ['conversationById', id],
-    queryFn: () => $fetch<ConversationById>(`/api/v1/conversations/${id}`, {
-      baseURL: config.public.apiBase,
-      headers: {
-        authorization: `Bearer ${token?.accessToken}`
-      }
-    })
+    queryFn: () => $api<ConversationById>(`/conversations/${id}`)
   })
 }
 
@@ -35,6 +28,30 @@ export function useDeleteConversationById() {
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
       queryClient.invalidateQueries({ queryKey: ['conversationById', id] })
       navigateTo('/chat')
+    }
+  })
+}
+
+export function useAssignConversation(id: string) {
+  const { $api } = useNuxtApp()
+  const queryClient = useQueryClient()
+  const toast = useToast()
+  return useMutation({
+    mutationFn: (assigneeId: number | null) => $api<ConversationById>(`/conversations/${id}/assign`, {
+      method: 'patch',
+      body: { assigneeId }
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      queryClient.invalidateQueries({ queryKey: ['conversationById', id] })
+    },
+    onError: (error) => {
+      toast.add({
+        title: 'Could not assign chat',
+        description: (error as { data?: { message?: string } }).data?.message,
+        color: 'error',
+        icon: 'i-lucide-circle-alert'
+      })
     }
   })
 }

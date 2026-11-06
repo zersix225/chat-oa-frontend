@@ -4,6 +4,8 @@ import { useGetConversationById } from '../../composables/useConversation'
 import { useFaceBookPushMessage, useLinePushMessage } from '../../composables/useWebhook'
 import { useWebsocket } from '../../composables/useWebsocket'
 import { useAuthMe } from '../../composables/useAuth'
+import { useConversationReadEvents, useGetConversationReaders, useMarkConversationRead } from '../../composables/useConversationRead'
+import { useDocumentVisibility } from '@vueuse/core'
 import type { ConversationById } from '~/types/conversation'
 import type { UIMessage } from 'ai'
 
@@ -79,10 +81,42 @@ const messages = computed(() => {
 })
 
 const bottomRef = ref<HTMLElement | null>(null)
+const promptRef = useTemplateRef('prompt')
+
+function insertEmoji(emoji: string) {
+  const el = promptRef.value?.textareaRef
+  if (!el) {
+    input.value += emoji
+    return
+  }
+  const start = el.selectionStart ?? input.value.length
+  const end = el.selectionEnd ?? start
+  input.value = input.value.slice(0, start) + emoji + input.value.slice(end)
+  nextTick(() => {
+    el.focus()
+    el.setSelectionRange(start + emoji.length, start + emoji.length)
+  })
+}
 
 watch(() => messages.value.length, () => {
   nextTick(() => bottomRef.value?.scrollIntoView({ behavior: 'smooth' }))
 })
+
+const { data: readers } = useGetConversationReaders(id)
+const { mutate: markRead } = useMarkConversationRead(id)
+useConversationReadEvents()
+
+const visibility = useDocumentVisibility()
+const lastMessage = computed(() => data.value?.messages?.at(-1))
+let lastMarkedId: string | null = null
+
+watch([() => lastMessage.value?.id, visibility], ([lastId, state]) => {
+  if (!lastId || state !== 'visible') return
+  const messageId = String(lastId)
+  if (messageId === lastMarkedId) return
+  lastMarkedId = messageId
+  markRead(messageId)
+}, { immediate: true })
 </script>
 
 <template>
@@ -119,14 +153,28 @@ watch(() => messages.value.length, () => {
           </template>
         </UChatMessages>
 
+        <ChatSeenBy
+          :readers="readers ?? []"
+          :last-message-id="lastMessage ? String(lastMessage.id) : undefined"
+          :last-message-at="lastMessage?.timestamp"
+          :me-id="me?.id"
+          class="-mt-2 sm:-mt-4"
+        />
+
         <div ref="bottomRef" />
 
         <UChatPrompt
+          ref="prompt"
           v-model="input"
           variant="subtle"
+          :ui="{ base: 'ps-11.5', leading: 'items-center', trailing: 'items-center' }"
           class="sticky bottom-0 [view-transition-name:chat-prompt] rounded-b-none z-10"
           @submit="onSubmit"
         >
+          <template #leading>
+            <ChatEmojiPicker @select="insertEmoji" />
+          </template>
+
           <UChatPromptSubmit color="neutral" size="sm" />
         </UChatPrompt>
       </UContainer>

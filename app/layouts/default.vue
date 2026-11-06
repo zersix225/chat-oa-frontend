@@ -2,6 +2,7 @@
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { useAuthMe } from '~/composables/useAuth'
 import { useDeleteConversationById, useGetConversations } from '~/composables/useConversation'
+import { useAssignAlerts } from '~/composables/useAssignAlerts'
 
 const sidebarOpen = ref(false)
 const collapsed = ref(false)
@@ -12,6 +13,8 @@ const deleteTarget = ref<{ id: string, label: string } | null>(null)
 const { data: conversations, isPending: cp } = useGetConversations()
 const { data: me, isPending: mp } = useAuthMe()
 const { mutate } = useDeleteConversationById()
+
+useAssignAlerts()
 
 const items = computed(() => (conversations.value?.data ?? []).map(c => ({
   id: c.id,

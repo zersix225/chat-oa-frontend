@@ -18,13 +18,13 @@
 
       <UColorModeButton />
 
-<!--      <UButton-->
-<!--        v-if="(!data && isPending) || isError"-->
-<!--        label="Sign in"-->
-<!--        color="neutral"-->
-<!--        variant="outline"-->
-<!--        to="/login"-->
-<!--      />-->
+      <!--      <UButton -->
+      <!--        v-if="(!data && isPending) || isError" -->
+      <!--        label="Sign in" -->
+      <!--        color="neutral" -->
+      <!--        variant="outline" -->
+      <!--        to="/login" -->
+      <!--      /> -->
     </template>
   </UDashboardNavbar>
 </template>

@@ -21,6 +21,6 @@ WORKDIR /app
 
 COPY --from=build /app/.output/ ./
 
-EXPOSE 80
+EXPOSE 5173
 
 CMD ["node", "/app/server/index.mjs"]

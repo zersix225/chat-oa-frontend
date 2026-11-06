@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
-import { authTokenCollection } from '~/utils/auth.local'
+import { clearAuthToken, getAuthToken, saveAuthToken } from '~/utils/auth.local'
 import type { AuthToken } from '~/types/auth'
+import type { User } from '~/types/user'
 
 export function useAuthLogin() {
   const config = useRuntimeConfig()
+  const { $socket } = useNuxtApp()
   const toast = useToast()
   return useMutation({
     mutationFn: ({ email, password }: { email: string, password: string }) => {
@@ -15,28 +17,10 @@ export function useAuthLogin() {
     },
     onSuccess: (data) => {
       const route = useRoute()
-      const token = authTokenCollection.get('app-token')
-      const newToken = {
-        id: 'app-token',
-        accessToken: data.token,
-        refreshToken: data.refreshToken,
-        tokenExpires: data.tokenExpires
-      }
+      saveAuthToken(data)
 
-      if (token) {
-        authTokenCollection.update('app-token', (draft) => {
-          draft.accessToken = newToken.accessToken
-          draft.refreshToken = newToken.refreshToken
-          draft.tokenExpires = newToken.tokenExpires
-        })
-      } else {
-        authTokenCollection.insert({
-          id: 'app-token',
-          accessToken: data.token,
-          refreshToken: data.refreshToken,
-          tokenExpires: data.tokenExpires
-        })
-      }
+      // Reconnect the socket with the new token.
+      $socket.disconnect().connect()
 
       toast.add({
         title: 'Logged in successfully'
@@ -47,8 +31,9 @@ export function useAuthLogin() {
       }
     },
     onError: (err) => {
-      const emailError = err.response?._data?.errors.email
-      const passwordError = err.response?._data?.errors.password
+      const errors = (err as { data?: { errors?: { email?: string, password?: string } } }).data?.errors
+      const emailError = errors?.email
+      const passwordError = errors?.password
 
       let text = ''
 
@@ -72,17 +57,18 @@ export const useAuthMe = () => {
   const { $api } = useNuxtApp()
   return useQuery({
     queryKey: ['auth-me'],
-    queryFn: () => $api('/auth/me')
+    queryFn: () => $api<User>('/auth/me')
   })
 }
 
 export function useAuthLogout() {
   const config = useRuntimeConfig()
+  const { $socket } = useNuxtApp()
   const queryClient = useQueryClient()
   const toast = useToast()
   return useMutation({
     mutationFn: () => {
-      const token = authTokenCollection.get('app-token')
+      const token = getAuthToken()
       return $fetch('/api/v1/auth/logout', {
         method: 'post',
         headers: { authorization: `Bearer ${token?.accessToken}` },
@@ -94,7 +80,8 @@ export function useAuthLogout() {
       toast.add({
         title: 'Logged out successfully'
       })
-      authTokenCollection.delete('app-token')
+      clearAuthToken()
+      $socket.disconnect()
 
       // queryClient.clear()
       queryClient.setQueryData(['auth-me'], null)

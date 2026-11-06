@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import type {DropdownMenuItem} from '@nuxt/ui'
-import {useGetConversationById} from '~/composables/useConversation'
+import type { DropdownMenuItem } from '@nuxt/ui'
+import { useGetConversationById } from '~/composables/useConversation'
 
 defineProps<{ isOwner: boolean }>()
 
 const route = useRoute()
 const id = (route.params.id as string) ?? ''
 
-const {data, isPending} = useGetConversationById(id)
+const { data, isPending } = useGetConversationById(id)
 
 const displayTitle = computed(
   () => data.value?.contact.displayName || ''
@@ -70,7 +70,7 @@ const platformColor = computed(() => {
       variant="ghost"
       trailing-icon="i-lucide-chevron-down"
       :label="displayTitle"
-      :class="['group min-w-0 max-w-3xs data-[state=open]:bg-elevated', { 'text-muted': !title }]"
+      :class="['group min-w-0 max-w-3xs data-[state=open]:bg-elevated', { 'text-muted': !displayTitle }]"
       :ui="{
         trailingIcon: 'text-dimmed shrink-0 group-data-[state=open]:rotate-180 transition-transform duration-200'
       }"

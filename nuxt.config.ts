@@ -10,15 +10,17 @@ export default defineNuxtConfig({
     'nuxt-csurf'
   ],
 
-  devtools: {
-    enabled: { enabled: process.env.NODE_ENV !== 'production' }
+  app: {
+    baseURL: '/'
   },
 
   css: ['~/assets/css/main.css'],
 
   runtimeConfig: {
     public: {
-      apiBase: process.env.BACKEND_URL ?? ''
+      apiBase: process.env.NODE_ENV === 'development'
+        ? 'http://localhost:3000'
+        : ''
     }
   },
 
@@ -27,19 +29,6 @@ export default defineNuxtConfig({
   },
 
   compatibilityDate: '2024-07-11',
-
-  nitro: {
-    features: {
-      websocket: true
-    },
-    routeRules: {
-      '/socket.io/**': {
-        proxy: 'http://localhost:80/socket.io/**'
-      }
-    },
-    minify: true,
-    sourceMap: false
-  },
 
   vite: {
     optimizeDeps: {
