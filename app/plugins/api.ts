@@ -54,8 +54,7 @@ export default defineNuxtPlugin((nuxtApp) => {
       useToast().add({
         title: 'Session expired',
         description: 'Please log in again.',
-        color: 'warning',
-        icon: 'i-lucide-log-out'
+        color: 'warning'
       })
       await navigateTo('/login')
     })
