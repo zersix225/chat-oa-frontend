@@ -96,6 +96,8 @@ watch(() => messages.value.length, () => {
         <template #title>
           <ChatTitle :chat-id="id" :is-owner="false" />
         </template>
+
+        <ChatAssignAdmin :chat-id="id" />
       </Navbar>
     </template>
 
