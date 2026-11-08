@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from '@nuxt/ui'
 
-definePageMeta({
-  middleware: ['auth']
-})
-
 const items: NavigationMenuItem[] = [{
   label: 'Figma Kit',
   to: 'https://go.nuxt.com/figma-ui',

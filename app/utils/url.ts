@@ -20,3 +20,10 @@ export function getDomain(url: string): string {
 export function getFaviconUrl(url: string): string {
   return `https://www.google.com/s2/favicons?sz=32&domain=${getDomain(url)}`
 }
+
+/** A same-site path to redirect to (e.g. ?redirect=/chat/123), or null. */
+export function safeRedirect(value: unknown): string | null {
+  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//')
+    ? value
+    : null
+}

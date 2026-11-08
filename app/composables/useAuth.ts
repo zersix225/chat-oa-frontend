@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { clearAuthToken, getAuthToken, saveAuthToken } from '~/utils/auth.local'
+import { safeRedirect } from '~/utils/url'
 import type { AuthToken } from '~/types/auth'
 import type { User } from '~/types/user'
 
@@ -26,8 +27,10 @@ export function useAuthLogin() {
         title: 'Logged in successfully'
       })
 
-      if (route.path !== '/chat') {
-        navigateTo('/chat')
+      // Back to the page the user tried to open before logging in.
+      const target = safeRedirect(route.query.redirect) ?? '/chat'
+      if (route.fullPath !== target) {
+        navigateTo(target)
       }
     },
     onError: (err) => {

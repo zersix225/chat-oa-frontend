@@ -56,7 +56,9 @@ export default defineNuxtPlugin((nuxtApp) => {
         description: 'Please log in again.',
         color: 'warning'
       })
-      await navigateTo('/login')
+      // Come back to the same page after logging in again.
+      const current = useRoute().fullPath
+      await navigateTo(current.startsWith('/login') ? '/login' : { path: '/login', query: { redirect: current } })
     })
 
     loggingOut = false

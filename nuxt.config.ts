@@ -24,6 +24,16 @@ export default defineNuxtConfig({
     }
   },
 
+  // Login state is in localStorage, which the server can't read, so the
+  // protected pages are rendered in the browser only. Otherwise the server
+  // renders the dashboard for logged-out users before the redirect to /login.
+  routeRules: {
+    '/chat': { ssr: false },
+    '/chat/**': { ssr: false },
+    '/log': { ssr: false },
+    '/log/**': { ssr: false }
+  },
+
   devServer: {
     port: 5173
   },

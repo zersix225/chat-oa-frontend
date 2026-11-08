@@ -10,10 +10,6 @@ import { useDocumentVisibility } from '@vueuse/core'
 import type { ConversationById } from '~/types/conversation'
 import type { UIMessage } from 'ai'
 
-definePageMeta({
-  middleware: ['auth']
-})
-
 const route = useRoute()
 const input = ref('')
 const id = (route.params.id as string) ?? ''
