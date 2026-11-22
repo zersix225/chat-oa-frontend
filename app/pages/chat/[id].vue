@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useQueryClient } from '@tanstack/vue-query'
 import { useGetConversationById } from '../../composables/useConversation'
-import { useFaceBookPushMessage, useLinePushMessage } from '../../composables/useWebhook'
+import { useFaceBookPushMessage, useLinePushMessage, useTiktokPushMessage } from '../../composables/useWebhook'
 import { useUploadFile } from '../../composables/useFile'
 import { useWebsocket } from '../../composables/useWebsocket'
 import { useAuthMe } from '../../composables/useAuth'
@@ -16,6 +16,7 @@ const id = (route.params.id as string) ?? ''
 
 const { mutateAsync: pushLineMsg } = useLinePushMessage()
 const { mutateAsync: pushFaceMsg } = useFaceBookPushMessage()
+const { mutateAsync: pushTiktokMsg } = useTiktokPushMessage()
 const { mutateAsync: uploadFile } = useUploadFile()
 const toast = useToast()
 const { newMessage } = useWebsocket()
@@ -92,6 +93,15 @@ async function onSubmit() {
         fileId,
         fileName: pendingFile.value?.name,
         customerId: contact.customerId,
+        conversationId: id,
+        adminId: me.value.id
+      })
+    } else if (contact.contactPlatform === 'tiktok') {
+      await pushTiktokMsg({
+        recipientId: contact.customerId,
+        text: text || undefined,
+        fileId,
+        fileName: pendingFile.value?.name,
         conversationId: id,
         adminId: me.value.id
       })

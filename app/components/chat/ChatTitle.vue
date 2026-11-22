@@ -34,6 +34,8 @@ const platformColor = computed(() => {
       return 'success'
     case 'facebook':
       return 'info'
+    case 'tiktok':
+      return 'neutral'
     default:
       return undefined
   }
