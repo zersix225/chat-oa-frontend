@@ -1,5 +1,11 @@
 <script setup lang="ts">
+import { en, th } from '@nuxt/ui/locale'
+
 const colorMode = useColorMode()
+const { locale } = useI18n()
+
+// Built-in Nuxt UI text (close buttons, pagination, etc.) follows the app language.
+const uiLocale = computed(() => (locale.value === 'th' ? th : en))
 
 const color = computed(() => colorMode.value === 'dark' ? '#1b1718' : 'white')
 
@@ -13,7 +19,7 @@ useHead({
     { rel: 'icon', href: '/favicon.ico' }
   ],
   htmlAttrs: {
-    lang: 'en'
+    lang: locale
   }
 })
 
@@ -31,7 +37,7 @@ useSeoMeta({
 </script>
 
 <template>
-  <UApp>
+  <UApp :locale="uiLocale">
     <NuxtLoadingIndicator color="var(--ui-primary)" />
     <NuxtLayout>
       <NuxtPage />

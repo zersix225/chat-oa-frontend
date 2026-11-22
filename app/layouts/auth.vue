@@ -12,6 +12,11 @@
       class="absolute left-8 top-8 rounded-full z-10"
     />
 
+    <div class="absolute right-8 top-8 z-10 flex items-center gap-1">
+      <LanguageSwitcher />
+      <UColorModeButton />
+    </div>
+
     <UPageCard
       class="w-full max-w-md"
       rientation="horizontal"

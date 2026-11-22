@@ -15,6 +15,8 @@ const deleteTarget = ref<{ id: string, label: string } | null>(null)
 const { data: conversations, isPending: cp } = useGetConversations()
 const { data: me, isPending: mp } = useAuthMe()
 const { mutate } = useDeleteConversationById()
+const { t, locale } = useI18n()
+const toast = useToast()
 
 useAssignAlerts()
 const { unreadById } = useUnreadCounts()
@@ -27,9 +29,9 @@ const items = computed(() => (conversations.value?.data ?? []).map((c) => {
     manyUnread: unreadCount > 1,
     label: c.contact.displayName,
     description: unreadCount > 1
-      ? `${unreadCount > 9 ? '9+' : unreadCount} new messages`
+      ? t('sidebar.newMessages', { count: unreadCount > 9 ? '9+' : unreadCount })
       : messageLogText(c.lastMessage),
-    senderType: unreadCount <= 1 && c.lastMessage.senderType === 'admin' ? 'You' : '',
+    senderType: unreadCount <= 1 && c.lastMessage.senderType === 'admin' ? t('sidebar.you') : '',
     to: `/chat/${c.id}`,
     avatar: { src: c.contact.pictureUrl, alt: c.contact.displayName },
     lastTimestamp: c.lastMessage.timestamp,
@@ -51,7 +53,7 @@ const skeletonWidths = [
 function getChatActions(item: { id: string, label: string }): DropdownMenuItem[][] {
   return [[
     {
-      label: 'Delete',
+      label: t('common.delete'),
       icon: 'i-lucide-trash',
       color: 'error' as const,
       onClick: () => {
@@ -64,10 +66,9 @@ function getChatActions(item: { id: string, label: string }): DropdownMenuItem[]
 
 function confirmDeleteButton() {
   if (!deleteTarget.value) return
-  const toast = useToast()
   mutate(deleteTarget.value.id, {
     onSuccess: () => {
-      toast.add({ title: 'Deleted successful' })
+      toast.add({ title: t('sidebar.deleted') })
       deleteTarget.value = null
     }
   })
@@ -99,7 +100,7 @@ function confirmDeleteButton() {
         <UNavigationMenu
           :items="[
             {
-              label: 'Search',
+              label: t('sidebar.search'),
               icon: 'i-lucide-search',
               kbds: ['meta', 'k'],
               onSelect: () => {
@@ -107,12 +108,12 @@ function confirmDeleteButton() {
               }
             },
             {
-              label: 'Logs',
+              label: t('sidebar.logs'),
               icon: 'i-lucide-hard-drive',
               to: '/log'
             },
             ...(isSuperAdmin(me) ? [{
-              label: 'New admin',
+              label: t('sidebar.newAdmin'),
               icon: 'i-lucide-user-plus',
               to: '/admins'
             }] : [])
@@ -176,6 +177,7 @@ function confirmDeleteButton() {
                       ·
                       <NuxtTime
                         :datetime="item.lastTimestamp"
+                        :locale="locale"
                         relative
                       />
                     </template>
@@ -197,7 +199,7 @@ function confirmDeleteButton() {
                 variant="link"
                 size="sm"
                 class="rounded-[5px] hover:bg-accented/50 focus-visible:bg-accented/50 data-[state=open]:bg-accented/50"
-                aria-label="Chat actions"
+                :aria-label="t('sidebar.chatActions')"
                 tabindex="-1"
                 @click.stop.prevent
               />
@@ -209,14 +211,14 @@ function confirmDeleteButton() {
           <template #content>
             <div class="p-4 space-y-4">
               <p class="text-sm">
-                Are you sure delete the chat
+                {{ t('sidebar.confirmDelete') }}
               </p>
               <div class="flex justify-end gap-2">
                 <UButton color="neutral" variant="soft" @click="deleteTarget = null">
-                  Cancel
+                  {{ t('common.cancel') }}
                 </UButton>
                 <UButton color="error" @click="confirmDeleteButton">
-                  Delete
+                  {{ t('common.delete') }}
                 </UButton>
               </div>
             </div>
@@ -248,7 +250,7 @@ function confirmDeleteButton() {
 
     <UDashboardSearch
       v-model:open="searchOpen"
-      placeholder="Search contacts..."
+      :placeholder="t('sidebar.searchContacts')"
       :groups="[{
         id: 'contacts',
         items: items

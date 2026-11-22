@@ -26,7 +26,6 @@ export function formatBytes(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
-
 export function messageLogText(msg: { messageType?: MessageType | null, content?: string | null, file?: StoredFile | null }): string {
   const type = msg.messageType ?? 'text'
   if (type === 'text') return msg.content ?? ''

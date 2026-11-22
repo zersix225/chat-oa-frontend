@@ -5,6 +5,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ close: [string | false] }>()
 
+const { t } = useI18n()
 const value = ref(props.title ?? '')
 
 const trimmed = computed(() => value.value.trim())
@@ -29,7 +30,7 @@ function submit() {
         v-model="value"
         autofocus
         size="lg"
-        placeholder="Chat title"
+        :placeholder="t('chat.chatTitle')"
         class="w-full"
         :ui="{ root: 'w-full' }"
         @keydown.enter.prevent="submit"
@@ -37,11 +38,11 @@ function submit() {
     </template>
 
     <template #footer>
-      <UButton label="Save" :disabled="!trimmed" @click="submit" />
+      <UButton :label="t('common.save')" :disabled="!trimmed" @click="submit" />
       <UButton
         color="neutral"
         variant="ghost"
-        label="Cancel"
+        :label="t('common.cancel')"
         @click="emit('close', false)"
       />
     </template>

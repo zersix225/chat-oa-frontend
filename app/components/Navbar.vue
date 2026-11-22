@@ -16,6 +16,7 @@
     <template #right>
       <slot />
 
+      <LanguageSwitcher />
       <UColorModeButton />
 
       <!--      <UButton -->

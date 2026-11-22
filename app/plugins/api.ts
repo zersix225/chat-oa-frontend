@@ -51,9 +51,10 @@ export default defineNuxtPlugin((nuxtApp) => {
 
     await nuxtApp.runWithContext(async () => {
       useQueryClient().clear()
+      const { $i18n } = useNuxtApp()
       useToast().add({
-        title: 'Session expired',
-        description: 'Please log in again.',
+        title: $i18n.t('auth.sessionExpired'),
+        description: $i18n.t('auth.loginAgain'),
         color: 'warning'
       })
       // Come back to the same page after logging in again.
@@ -70,6 +71,11 @@ export default defineNuxtPlugin((nuxtApp) => {
       const token = getAuthToken()
       if (token) {
         options.headers.set('authorization', `Bearer ${token.accessToken}`)
+      }
+      // Backend error messages come back in the UI language.
+      const locale = (nuxtApp.$i18n as { locale?: { value: string } } | undefined)?.locale?.value
+      if (locale) {
+        options.headers.set(LANGUAGE_HEADER, locale)
       }
     }
   })

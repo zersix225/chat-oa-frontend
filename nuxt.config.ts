@@ -7,7 +7,8 @@ export default defineNuxtConfig({
     '@nuxthub/core',
     'nuxt-auth-utils',
     'nuxt-charts',
-    'nuxt-csurf'
+    'nuxt-csurf',
+    '@nuxtjs/i18n'
   ],
 
   app: {
@@ -59,6 +60,22 @@ export default defineNuxtConfig({
         commaDangle: 'never',
         braceStyle: '1tbs'
       }
+    }
+  },
+
+  // URLs stay the same in every language (no /th prefix); the choice is kept
+  // in a cookie so it survives reloads.
+  i18n: {
+    strategy: 'no_prefix',
+    defaultLocale: 'en',
+    locales: [
+      { code: 'en', language: 'en-US', name: 'English', file: 'en.json' },
+      { code: 'th', language: 'th-TH', name: 'ไทย', file: 'th.json' }
+    ],
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: 'i18n_locale',
+      fallbackLocale: 'en'
     }
   }
 })

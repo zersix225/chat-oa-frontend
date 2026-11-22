@@ -8,10 +8,12 @@ const props = defineProps<{
   meId?: number
 }>()
 
+const { t } = useI18n()
+
 function readerName(reader: ConversationReader) {
   const user = reader.user
   const name = [user?.firstName, user?.lastName].filter(Boolean).join(' ')
-  return name || user?.email || `Admin #${reader.userId}`
+  return name || user?.email || t('chat.adminNumber', { id: reader.userId })
 }
 
 const names = computed(() => {
@@ -34,6 +36,6 @@ const names = computed(() => {
     class="flex items-center justify-end gap-1 text-xs text-muted"
   >
     <UIcon name="i-lucide-check-check" class="size-3.5 shrink-0" />
-    <span class="truncate">Seen by {{ names.join(', ') }}</span>
+    <span class="truncate">{{ t('chat.seenBy', { names: names.join(', ') }) }}</span>
   </div>
 </template>

@@ -6,14 +6,15 @@ import type { User } from '~/types/user'
 
 export function useAuthLogin() {
   const config = useRuntimeConfig()
-  const { $socket } = useNuxtApp()
+  const { $socket, $i18n } = useNuxtApp()
   const toast = useToast()
   return useMutation({
     mutationFn: ({ email, password }: { email: string, password: string }) => {
       return $fetch<AuthToken>('/api/v1/auth/email/login', {
         method: 'post',
         body: { email, password },
-        baseURL: config.public.apiBase
+        baseURL: config.public.apiBase,
+        headers: { [LANGUAGE_HEADER]: $i18n.locale.value }
       })
     },
     onSuccess: (data) => {
@@ -24,7 +25,7 @@ export function useAuthLogin() {
       $socket.disconnect().connect()
 
       toast.add({
-        title: 'Logged in successfully'
+        title: $i18n.t('auth.loggedIn')
       })
 
       // Back to the page the user tried to open before logging in.
@@ -41,15 +42,15 @@ export function useAuthLogin() {
       let text = ''
 
       if (emailError && passwordError) {
-        text = `${emailError} or ${passwordError}`
+        text = $i18n.t('auth.eitherError', { email: emailError, password: passwordError })
       } else if (!emailError) {
-        text = `Password: ${passwordError}`
+        text = $i18n.t('auth.passwordError', { error: passwordError })
       } else if (!passwordError) {
-        text = `Email: ${emailError}`
+        text = $i18n.t('auth.emailError', { error: emailError })
       }
 
       toast.add({
-        title: 'Something went wrong',
+        title: $i18n.t('common.somethingWentWrong'),
         description: text
       })
     }
@@ -66,7 +67,7 @@ export const useAuthMe = () => {
 
 export function useAuthLogout() {
   const config = useRuntimeConfig()
-  const { $socket } = useNuxtApp()
+  const { $socket, $i18n } = useNuxtApp()
   const queryClient = useQueryClient()
   const toast = useToast()
   return useMutation({
@@ -74,14 +75,14 @@ export function useAuthLogout() {
       const token = getAuthToken()
       return $fetch('/api/v1/auth/logout', {
         method: 'post',
-        headers: { authorization: `Bearer ${token?.accessToken}` },
+        headers: { authorization: `Bearer ${token?.accessToken}`, [LANGUAGE_HEADER]: $i18n.locale.value },
         baseURL: config.public.apiBase
       })
     },
     onSuccess: () => {
       const route = useRoute()
       toast.add({
-        title: 'Logged out successfully'
+        title: $i18n.t('auth.loggedOut')
       })
       clearAuthToken()
       $socket.disconnect()

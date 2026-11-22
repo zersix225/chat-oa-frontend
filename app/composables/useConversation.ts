@@ -36,6 +36,7 @@ export function useAssignConversation(id: string) {
   const { $api } = useNuxtApp()
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { $i18n } = useNuxtApp()
   return useMutation({
     mutationFn: (assigneeId: number | null) => $api<ConversationById>(`/conversations/${id}/assign`, {
       method: 'patch',
@@ -47,7 +48,7 @@ export function useAssignConversation(id: string) {
     },
     onError: (error) => {
       toast.add({
-        title: 'Could not assign chat',
+        title: $i18n.t('assign.failed'),
         description: (error as { data?: { message?: string } }).data?.message,
         color: 'error',
         icon: 'i-lucide-circle-alert'

@@ -13,7 +13,8 @@ const props = defineProps<{
 
 const type = computed(() => props.message.messageType ?? 'text')
 const url = computed(() => props.message.file?.path)
-const fileName = computed(() => props.message.content || (url.value ? getFileName(url.value) : 'File'))
+const { t } = useI18n()
+const fileName = computed(() => props.message.content || (url.value ? getFileName(url.value) : t('common.file')))
 const previewOpen = ref(false)
 </script>
 
@@ -27,7 +28,7 @@ const previewOpen = ref(false)
   <img
     v-else-if="type === 'sticker' && message.content"
     :src="message.content"
-    alt="Sticker"
+    :alt="t('chat.sticker')"
     loading="lazy"
     class="size-28 object-contain"
   >
@@ -35,14 +36,14 @@ const previewOpen = ref(false)
   <!-- Media that could not be downloaded from LINE / Facebook -->
   <div v-else-if="!url" class="flex items-center gap-2 text-sm text-muted italic">
     <UIcon name="i-lucide-file-x" class="size-4" />
-    {{ messageLogText(message) }} (not available)
+    {{ t('chat.notAvailable', { text: messageLogText(message) || t('common.file') }) }}
   </div>
 
   <template v-else-if="type === 'image'">
     <button type="button" class="block cursor-zoom-in" @click="previewOpen = true">
       <img
         :src="url"
-        alt="Image"
+        :alt="t('chat.image')"
         loading="lazy"
         class="max-h-72 max-w-full sm:max-w-xs rounded-md object-contain"
       >
@@ -50,7 +51,7 @@ const previewOpen = ref(false)
     <UModal v-model:open="previewOpen" :ui="{ content: 'sm:max-w-4xl' }">
       <template #content>
         <div class="relative">
-          <img :src="url" alt="Image" class="w-full max-h-[85vh] object-contain">
+          <img :src="url" :alt="t('chat.image')" class="w-full max-h-[85vh] object-contain">
           <div class="absolute top-2 end-2 flex gap-1">
             <UButton
               :to="url"
@@ -59,14 +60,14 @@ const previewOpen = ref(false)
               color="neutral"
               variant="solid"
               size="sm"
-              aria-label="Open original"
+              :aria-label="t('chat.openOriginal')"
             />
             <UButton
               icon="i-lucide-x"
               color="neutral"
               variant="solid"
               size="sm"
-              aria-label="Close"
+              :aria-label="t('common.close')"
               @click="previewOpen = false"
             />
           </div>

@@ -8,6 +8,7 @@ const route = useRoute()
 const id = (route.params.id as string) ?? ''
 
 const { data, isPending } = useGetConversationById(id)
+const { t } = useI18n()
 
 const displayTitle = computed(
   () => data.value?.contact.displayName || ''
@@ -15,13 +16,13 @@ const displayTitle = computed(
 
 const items = computed<DropdownMenuItem[][]>(() => [[
   {
-    label: 'Rename',
+    label: t('common.rename'),
     icon: 'i-lucide-pencil'
     // onSelect: rename
   }
 ], [
   {
-    label: 'Delete',
+    label: t('common.delete'),
     icon: 'i-lucide-trash',
     color: 'error' as const
     // onSelect: () => deleteChat(props.chatId)

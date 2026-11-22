@@ -12,14 +12,18 @@ import type { UIMessage } from 'ai'
 
 const TIME_GAP_MS = 30 * 60 * 1000
 
+const { t, locale } = useI18n()
+const dateLocale = computed(() => (locale.value === 'th' ? 'th-TH' : 'en-GB'))
+
 function formatSeparator(date: Date) {
-  const time = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+  const lang = dateLocale.value
+  const time = date.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' })
   const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
   const days = Math.round((startOfDay(new Date()) - startOfDay(date)) / 86400000)
   if (days === 0) return time
-  if (days === 1) return `Yesterday ${time}`
-  if (days < 7) return `${date.toLocaleDateString('en-GB', { weekday: 'short' })} ${time}`
-  return `${date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}, ${time}`
+  if (days === 1) return t('chat.yesterday', { time })
+  if (days < 7) return `${date.toLocaleDateString(lang, { weekday: 'short' })} ${time}`
+  return `${date.toLocaleDateString(lang, { day: 'numeric', month: 'short', year: 'numeric' })}, ${time}`
 }
 
 const route = useRoute()
@@ -73,14 +77,14 @@ function onFilePicked(event: Event) {
 
   if (!isAcceptedFile(file, accept)) {
     toast.add({
-      title: 'File type not supported',
-      description: 'Please choose an image, video, audio or document file.',
+      title: t('chat.fileNotSupported'),
+      description: t('chat.fileNotSupportedDescription'),
       color: 'error'
     })
     return
   }
   if (file.size > MAX_UPLOAD_BYTES) {
-    toast.add({ title: 'File too large', description: `Max ${formatBytes(MAX_UPLOAD_BYTES)}.`, color: 'error' })
+    toast.add({ title: t('chat.fileTooLarge'), description: t('chat.fileTooLargeDescription', { size: formatBytes(MAX_UPLOAD_BYTES) }), color: 'error' })
     return
   }
   setPendingFile(file)
@@ -136,8 +140,8 @@ async function onSubmit() {
   } catch (error) {
     const data = (error as { data?: { message?: string, errors?: Record<string, string> } }).data
     toast.add({
-      title: 'Message not sent',
-      description: data?.message ?? Object.values(data?.errors ?? {})[0] ?? 'Please try again.',
+      title: t('chat.notSent'),
+      description: data?.message ?? Object.values(data?.errors ?? {})[0] ?? t('common.tryAgain'),
       color: 'error'
     })
   } finally {
@@ -300,7 +304,7 @@ watch([() => lastMessage.value?.id, visibility], ([lastId, state]) => {
               <img
                 v-if="pendingPreview"
                 :src="pendingPreview"
-                alt="Selected image"
+                :alt="t('chat.selectedImage')"
                 class="size-12 rounded object-cover"
               >
               <UIcon v-else name="i-lucide-file-text" class="size-8 text-primary shrink-0" />
@@ -309,7 +313,7 @@ watch([() => lastMessage.value?.id, visibility], ([lastId, state]) => {
                   {{ pendingFile.name }}
                 </p>
                 <p class="text-xs text-muted">
-                  {{ sending ? 'Sending…' : formatBytes(pendingFile.size) }}
+                  {{ sending ? t('chat.sending') : formatBytes(pendingFile.size) }}
                 </p>
               </div>
               <UButton
@@ -317,7 +321,7 @@ watch([() => lastMessage.value?.id, visibility], ([lastId, state]) => {
                 color="neutral"
                 variant="ghost"
                 size="xs"
-                aria-label="Remove attachment"
+                :aria-label="t('chat.removeAttachment')"
                 :disabled="sending"
                 @click="setPendingFile(null)"
               />
@@ -326,13 +330,13 @@ watch([() => lastMessage.value?.id, visibility], ([lastId, state]) => {
 
           <template #leading>
             <ChatEmojiPicker @select="insertEmoji" />
-            <UTooltip :text="data?.contact.contactPlatform === 'line' ? 'Attach file (non-images are sent to LINE as a link)' : 'Attach file'">
+            <UTooltip :text="data?.contact.contactPlatform === 'line' ? t('chat.attachFileLine') : t('chat.attachFile')">
               <UButton
                 icon="i-lucide-paperclip"
                 variant="ghost"
                 color="neutral"
                 size="sm"
-                aria-label="Attach file"
+                :aria-label="t('chat.attachFile')"
                 :disabled="sending"
                 @click="fileInput?.click()"
               />

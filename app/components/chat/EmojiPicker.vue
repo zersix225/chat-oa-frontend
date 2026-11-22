@@ -4,6 +4,7 @@ const emit = defineEmits<{ select: [emoji: string] }>()
 const open = ref(false)
 const pickerEl = ref<HTMLElement | null>(null)
 const colorMode = useColorMode()
+const { t } = useI18n()
 
 let picker: HTMLElement | null = null
 
@@ -41,7 +42,7 @@ watch(open, (isOpen) => {
       variant="ghost"
       size="sm"
       :ui="{ base: 'p-1', leadingIcon: 'size-5' }"
-      aria-label="Insert emoji"
+      :aria-label="t('chat.insertEmoji')"
     />
 
     <template #content>

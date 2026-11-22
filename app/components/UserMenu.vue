@@ -10,6 +10,7 @@ const colorMode = useColorMode()
 const appConfig = useAppConfig()
 const { data: user } = useAuthMe()
 const { mutate } = useAuthLogout()
+const { t } = useI18n()
 
 const colors = ['red', 'orange', 'amber', 'yellow', 'lime', 'green', 'emerald', 'teal', 'cyan', 'sky', 'blue', 'indigo', 'violet', 'purple', 'fuchsia', 'pink', 'rose']
 const neutrals = ['slate', 'gray', 'zinc', 'neutral', 'stone']
@@ -22,10 +23,10 @@ const items = computed<DropdownMenuItem[][]>(() => ([[{
     alt: user.value?.firstName || user.value?.lastName
   }
 }], [{
-  label: 'Theme',
+  label: t('userMenu.theme'),
   icon: 'i-lucide-palette',
   children: [{
-    label: 'Primary',
+    label: t('userMenu.primary'),
     slot: 'chip',
     chip: appConfig.ui.colors.primary,
     content: {
@@ -45,7 +46,7 @@ const items = computed<DropdownMenuItem[][]>(() => ([[{
       }
     }))
   }, {
-    label: 'Neutral',
+    label: t('userMenu.neutral'),
     slot: 'chip',
     chip: appConfig.ui.colors.neutral === 'neutral' ? 'old-neutral' : appConfig.ui.colors.neutral,
     content: {
@@ -66,10 +67,10 @@ const items = computed<DropdownMenuItem[][]>(() => ([[{
     }))
   }]
 }, {
-  label: 'Appearance',
+  label: t('userMenu.appearance'),
   icon: 'i-lucide-sun-moon',
   children: [{
-    label: 'Light',
+    label: t('userMenu.light'),
     icon: 'i-lucide-sun',
     type: 'checkbox',
     checked: colorMode.value === 'light',
@@ -79,7 +80,7 @@ const items = computed<DropdownMenuItem[][]>(() => ([[{
       colorMode.preference = 'light'
     }
   }, {
-    label: 'Dark',
+    label: t('userMenu.dark'),
     icon: 'i-lucide-moon',
     type: 'checkbox',
     checked: colorMode.value === 'dark',
@@ -93,7 +94,7 @@ const items = computed<DropdownMenuItem[][]>(() => ([[{
     }
   }]
 }], [{
-  label: 'Log out',
+  label: t('userMenu.logout'),
   icon: 'i-lucide-log-out',
   onSelect() {
     mutate()

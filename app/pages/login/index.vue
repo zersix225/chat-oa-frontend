@@ -3,27 +3,29 @@ import type { AuthFormField, FormSubmitEvent } from '@nuxt/ui'
 import { useAuthLogin } from '../../composables/useAuth'
 import * as z from 'zod'
 
-const fields = ref<AuthFormField[]>([
+const { t } = useI18n()
+
+const fields = computed<AuthFormField[]>(() => [
   {
     name: 'email',
     type: 'text',
-    label: 'Email'
+    label: t('auth.email')
   },
   {
     name: 'password',
     type: 'password',
-    label: 'Password'
+    label: t('auth.password')
   }
 ])
 
 const { mutate } = useAuthLogin()
 
-const schema = z.object({
-  email: z.email('Invalid email'),
-  password: z.string('Password is required').min(1, 'Password is required')
-})
+const schema = computed(() => z.object({
+  email: z.email(t('auth.invalidEmail')),
+  password: z.string(t('auth.passwordRequired')).min(1, t('auth.passwordRequired'))
+}))
 
-type Schema = z.output<typeof schema>
+type Schema = z.output<typeof schema.value>
 
 function onSubmit(payload: FormSubmitEvent<Schema>) {
   mutate({ email: payload.data.email, password: payload.data.password })
@@ -37,8 +39,8 @@ definePageMeta({
 <template>
   <UAuthForm
     :schema="schema"
-    title="Login"
-    description="Enter your credentials to access your account."
+    :title="t('auth.loginTitle')"
+    :description="t('auth.loginDescription')"
     :fields="fields"
     :separator="{
       icon: 'i-lucide-user'

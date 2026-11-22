@@ -7,6 +7,8 @@ export function useAssignAlerts() {
   const queryClient = useQueryClient()
   const toast = useToast()
   const { data: me } = useAuthMe()
+  const { $i18n } = useNuxtApp()
+  const t = $i18n.t
 
   const supported = () => import.meta.client && 'Notification' in window
 
@@ -33,7 +35,7 @@ export function useAssignAlerts() {
     if (!supported()) return
     const result = await Notification.requestPermission()
     if (result === 'granted') {
-      new Notification('Notifications enabled', { body: 'You will be alerted when a chat is assigned to you.' })
+      new Notification(t('assign.alertsEnabled'), { body: t('assign.alertsEnabledDescription') })
     } else {
       showBlockedHelp()
     }
@@ -41,8 +43,8 @@ export function useAssignAlerts() {
 
   function showBlockedHelp() {
     toast.add({
-      title: 'Browser notifications are blocked',
-      description: 'Allow notifications for this site in your browser settings (click the icon left of the address bar).',
+      title: t('assign.alertsBlocked'),
+      description: t('assign.alertsBlockedDescription'),
       icon: 'i-lucide-bell-off',
       color: 'warning',
       duration: 10000
@@ -54,12 +56,12 @@ export function useAssignAlerts() {
     if (Notification.permission === 'default') {
       toast.add({
         id: 'enable-notifications',
-        title: 'Turn on browser alerts',
-        description: 'Get a notification when a chat is assigned to you.',
+        title: t('assign.turnOnAlerts'),
+        description: t('assign.turnOnAlertsDescription'),
         icon: 'i-lucide-bell-ring',
         duration: 0,
         actions: [{
-          label: 'Enable',
+          label: t('common.enable'),
           color: 'primary',
           variant: 'solid',
           onClick: () => {
@@ -77,10 +79,10 @@ export function useAssignAlerts() {
     const myId = me.value?.id
     if (!myId || event.assigneeId !== myId || event.assignedBy?.id === myId) return
 
-    const by = event.assignedBy ? userDisplayName(event.assignedBy) : 'Someone'
-    const chat = event.contactName ?? 'a chat'
-    const title = 'New chat assigned to you'
-    const description = `${by} assigned ${chat} to you`
+    const by = event.assignedBy ? userDisplayName(event.assignedBy) : t('common.someone')
+    const chat = event.contactName ?? t('common.aChat')
+    const title = t('assign.newAssigned')
+    const description = t('assign.assignedBy', { by, chat })
 
     toast.add({
       title,

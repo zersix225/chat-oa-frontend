@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { upperFirst } from 'scule'
 import type { TableColumn } from '@nuxt/ui'
 import { useMessageByConversationId } from '~/composables/useMessage'
 
@@ -10,6 +9,7 @@ const page = ref(1)
 const limit = ref(15)
 
 const { data, isFetching } = useMessageByConversationId(id, page, limit)
+const { t, locale } = useI18n()
 
 const total = computed(() => data.value?.total ?? 1)
 
@@ -31,11 +31,11 @@ const messages = computed<MessageResType[]>(() => (data.value?.massages ?? []).m
   date: c.timestamp
 })))
 
-const columns: TableColumn<MessageResType>[] = [
-  { accessorKey: 'id', header: 'Id', cell: ({ row }) => `${row.getValue('id')}` },
+const columns = computed<TableColumn<MessageResType>[]>(() => [
+  { accessorKey: 'id', header: t('logs.id'), cell: ({ row }) => `${row.getValue('id')}` },
   {
     accessorKey: 'content',
-    header: 'Content',
+    header: t('logs.content'),
     cell: ({ row }) => {
       const text = `${row.getValue('content')}`
       // Attachments: show the file name as a link to the file.
@@ -45,11 +45,11 @@ const columns: TableColumn<MessageResType>[] = [
         : text
     }
   },
-  { accessorKey: 'email', header: 'Email', cell: ({ row }) => `${row.getValue('email')}` },
-  { accessorKey: 'admin', header: 'Admin', cell: ({ row }) => `${row.getValue('admin')}` },
+  { accessorKey: 'email', header: t('logs.email'), cell: ({ row }) => `${row.getValue('email')}` },
+  { accessorKey: 'admin', header: t('logs.admin'), cell: ({ row }) => `${row.getValue('admin')}` },
   {
     accessorKey: 'date',
-    header: 'Date',
+    header: t('logs.date'),
     meta: {
       class: {
         th: 'text-right',
@@ -57,7 +57,7 @@ const columns: TableColumn<MessageResType>[] = [
       }
     },
     cell: ({ row }) => {
-      return new Date(row.getValue('date')).toLocaleString('en-US', {
+      return new Date(row.getValue('date')).toLocaleString(locale.value === 'th' ? 'th-TH' : 'en-US', {
         day: 'numeric',
         month: 'short',
         hour: '2-digit',
@@ -66,7 +66,7 @@ const columns: TableColumn<MessageResType>[] = [
       })
     }
   }
-]
+])
 const globalFilter = ref('')
 const columnVisibility = ref({
   id: false
@@ -89,7 +89,7 @@ const scrollToTop = () => {
       <Navbar>
         <template #title>
           <span class="text-sm font-medium text-highlighted truncate min-w-0">
-            Logs
+            {{ t('logs.title') }}
           </span>
         </template>
       </Navbar>
@@ -97,7 +97,7 @@ const scrollToTop = () => {
     <template #body>
       <div ref="scrollContainer" class="pt-16 h-full overflow-auto">
         <div class="flex items-center justify-end gap-2 px-4 py-3.5 border-b border-accented">
-          <UInput v-model="globalFilter" class="max-w-sm" placeholder="Filter..." />
+          <UInput v-model="globalFilter" class="max-w-sm" :placeholder="t('logs.filter')" />
 
           <UDropdownMenu
             :items="
@@ -105,7 +105,7 @@ const scrollToTop = () => {
                 ?.getAllColumns()
                 .filter((column) => column.getCanHide())
                 .map((column) => ({
-                  label: upperFirst(column.id),
+                  label: t(`logs.${column.id}`),
                   type: 'checkbox' as const,
                   checked: column.getIsVisible(),
                   onUpdateChecked(checked: boolean) {
@@ -119,7 +119,7 @@ const scrollToTop = () => {
             :content="{ align: 'end' }"
           >
             <UButton
-              label="Columns"
+              :label="t('logs.columns')"
               color="neutral"
               variant="outline"
               trailing-icon="i-lucide-chevron-down"

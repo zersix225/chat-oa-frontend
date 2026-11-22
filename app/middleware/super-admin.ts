@@ -8,6 +8,7 @@ export default defineNuxtRouteMiddleware(async () => {
   const { $api } = useNuxtApp()
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { $i18n } = useNuxtApp()
 
   const me = await queryClient.fetchQuery({
     queryKey: ['auth-me'],
@@ -17,8 +18,8 @@ export default defineNuxtRouteMiddleware(async () => {
   if (isSuperAdmin(me)) return
 
   toast.add({
-    title: 'No permission',
-    description: 'Only super admins can open this page.',
+    title: $i18n.t('admins.noPermission'),
+    description: $i18n.t('admins.superAdminOnly'),
     color: 'error'
   })
   return navigateTo('/chat')

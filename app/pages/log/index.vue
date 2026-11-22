@@ -2,6 +2,7 @@
 import { useGetConversations } from '~/composables/useConversation'
 
 const { data } = useGetConversations()
+const { t } = useI18n()
 
 const conversations = computed(() => (data.value?.data ?? []).map(c => ({
   id: c.id,
@@ -21,7 +22,7 @@ const conversations = computed(() => (data.value?.data ?? []).map(c => ({
       <Navbar>
         <template #title>
           <span class="text-sm font-medium text-highlighted truncate min-w-0">
-            Logs
+            {{ t('logs.title') }}
           </span>
         </template>
       </Navbar>

@@ -7,50 +7,52 @@ definePageMeta({
   middleware: 'super-admin'
 })
 
-const roleOptions = [
-  { label: 'Admin', value: ROLE_ADMIN },
-  { label: 'Super admin', value: ROLE_SUPER_ADMIN }
-]
+const { t } = useI18n()
 
-const fields = ref<AuthFormField[]>([
+const roleOptions = computed(() => [
+  { label: t('admins.roleAdmin'), value: ROLE_ADMIN },
+  { label: t('admins.roleSuperAdmin'), value: ROLE_SUPER_ADMIN }
+])
+
+const fields = computed<AuthFormField[]>(() => [
   {
     name: 'firstName',
     type: 'text',
-    label: 'First name'
+    label: t('admins.firstName')
   },
   {
     name: 'lastName',
     type: 'text',
-    label: 'Last name'
+    label: t('admins.lastName')
   },
   {
     name: 'email',
     type: 'text',
-    label: 'Email'
+    label: t('auth.email')
   },
   {
     name: 'password',
     type: 'password',
-    label: 'Password'
+    label: t('auth.password')
   },
   {
     name: 'roleId',
     type: 'select',
-    label: 'Role',
-    items: roleOptions,
-    defaultValue: roleOptions[0]
+    label: t('admins.role'),
+    items: roleOptions.value,
+    defaultValue: roleOptions.value[0]
   }
 ])
 
-const schema = z.object({
-  firstName: z.string('First name is required').trim().min(1, 'First name is required'),
-  lastName: z.string('Last name is required').trim().min(1, 'Last name is required'),
-  email: z.email('Invalid email'),
-  password: z.string('Password is required').min(6, 'At least 6 characters'),
-  roleId: z.object({ value: z.number() }, 'Role is required')
-})
+const schema = computed(() => z.object({
+  firstName: z.string(t('admins.firstNameRequired')).trim().min(1, t('admins.firstNameRequired')),
+  lastName: z.string(t('admins.lastNameRequired')).trim().min(1, t('admins.lastNameRequired')),
+  email: z.email(t('auth.invalidEmail')),
+  password: z.string(t('auth.passwordRequired')).min(6, t('admins.minPassword')),
+  roleId: z.object({ value: z.number() }, t('admins.roleRequired'))
+}))
 
-type Schema = z.output<typeof schema>
+type Schema = z.output<typeof schema.value>
 
 const formRef = useTemplateRef('form')
 const toast = useToast()
@@ -60,8 +62,8 @@ function onSubmit(payload: FormSubmitEvent<Schema>) {
   mutate({ ...payload.data, roleId: payload.data.roleId.value }, {
     onSuccess: (user) => {
       toast.add({
-        title: 'Admin created',
-        description: `${user.firstName} ${user.lastName} (${user.email}) can now log in.`,
+        title: t('admins.created'),
+        description: t('admins.createdDescription', { name: `${user.firstName} ${user.lastName}`, email: user.email }),
         color: 'success'
       })
       if (formRef.value) {
@@ -70,7 +72,7 @@ function onSubmit(payload: FormSubmitEvent<Schema>) {
           lastName: undefined,
           email: undefined,
           password: undefined,
-          roleId: roleOptions[0]
+          roleId: roleOptions.value[0]
         })
       }
     },
@@ -78,10 +80,10 @@ function onSubmit(payload: FormSubmitEvent<Schema>) {
       const data = (error as { data?: { message?: string, errors?: Record<string, string> } }).data
       const fieldError = Object.entries(data?.errors ?? {})[0]
       toast.add({
-        title: 'Could not create admin',
+        title: t('admins.createFailed'),
         description: fieldError
           ? `${fieldError[0]}: ${fieldError[1]}`
-          : data?.message ?? 'Please try again.',
+          : data?.message ?? t('common.tryAgain'),
         color: 'error'
       })
     }
@@ -99,7 +101,7 @@ function onSubmit(payload: FormSubmitEvent<Schema>) {
       <Navbar>
         <template #title>
           <span class="text-sm font-medium text-highlighted truncate min-w-0">
-            Create admin
+            {{ t('admins.pageTitle') }}
           </span>
         </template>
       </Navbar>
@@ -115,11 +117,11 @@ function onSubmit(payload: FormSubmitEvent<Schema>) {
           <UAuthForm
             ref="form"
             :schema="schema"
-            title="New admin"
-            description="Create a login for another admin."
+            :title="t('admins.formTitle')"
+            :description="t('admins.formDescription')"
             :fields="fields"
             :loading="isPending"
-            :submit="{ label: 'Create admin' }"
+            :submit="{ label: t('admins.submit') }"
             :separator="{
               icon: 'i-lucide-user-plus'
             }"
