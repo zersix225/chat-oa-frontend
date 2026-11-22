@@ -35,7 +35,7 @@ const previewOpen = ref(false)
   <!-- Media that could not be downloaded from LINE / Facebook -->
   <div v-else-if="!url" class="flex items-center gap-2 text-sm text-muted italic">
     <UIcon name="i-lucide-file-x" class="size-4" />
-    {{ messagePreview(message) }} (not available)
+    {{ messageLogText(message) }} (not available)
   </div>
 
   <template v-else-if="type === 'image'">

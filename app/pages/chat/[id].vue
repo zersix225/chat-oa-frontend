@@ -10,6 +10,18 @@ import { useDocumentVisibility } from '@vueuse/core'
 import type { ConversationById } from '~/types/conversation'
 import type { UIMessage } from 'ai'
 
+const TIME_GAP_MS = 30 * 60 * 1000
+
+function formatSeparator(date: Date) {
+  const time = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const days = Math.round((startOfDay(new Date()) - startOfDay(date)) / 86400000)
+  if (days === 0) return time
+  if (days === 1) return `Yesterday ${time}`
+  if (days < 7) return `${date.toLocaleDateString('en-GB', { weekday: 'short' })} ${time}`
+  return `${date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}, ${time}`
+}
+
 const route = useRoute()
 const input = ref('')
 const id = (route.params.id as string) ?? ''
@@ -120,6 +132,7 @@ async function onSubmit() {
     }
     input.value = ''
     setPendingFile(null)
+    scrollToBottom(false)
   } catch (error) {
     const data = (error as { data?: { message?: string, errors?: Record<string, string> } }).data
     toast.add({
@@ -129,22 +142,29 @@ async function onSubmit() {
     })
   } finally {
     sending.value = false
+    nextTick(() => promptRef.value?.textareaRef?.focus({ preventScroll: true }))
   }
 }
 const messages = computed(() => {
   const contact = data.value?.contact
   if (!contact) return []
 
-  return (data.value?.messages ?? []).map(msg => ({
-    id: String(msg.id),
-    role: msg.senderType === 'admin' ? 'assistant' : 'user',
-    parts: [{ type: 'text', text: messagePreview(msg) }],
-    raw: msg,
-    date: msg.timestamp,
-    avatar: msg.senderType !== 'admin' && contact.pictureUrl
-      ? { src: contact.pictureUrl }
-      : undefined
-  }))
+  const list = data.value?.messages ?? []
+  return list.map((msg, i) => {
+    const date = new Date(msg.timestamp)
+    const prev = list[i - 1]
+    const showTime = !prev || date.getTime() - new Date(prev.timestamp).getTime() >= TIME_GAP_MS
+    return {
+      id: String(msg.id),
+      role: msg.senderType === 'admin' ? 'assistant' as const : 'user' as const,
+      parts: [{ type: 'text' as const, text: messageLogText(msg) }],
+      raw: msg,
+      separator: showTime ? formatSeparator(date) : null,
+      avatar: msg.senderType !== 'admin' && contact.pictureUrl
+        ? { src: contact.pictureUrl }
+        : undefined
+    }
+  })
 })
 
 const bottomRef = ref<HTMLElement | null>(null)
@@ -165,8 +185,35 @@ function insertEmoji(emoji: string) {
   })
 }
 
-watch(() => messages.value.length, () => {
-  nextTick(() => bottomRef.value?.scrollIntoView({ behavior: 'smooth' }))
+function getScrollParent(): HTMLElement | null {
+  let el = bottomRef.value?.parentElement ?? null
+  while (el && el !== document.body) {
+    if (/auto|scroll/.test(getComputedStyle(el).overflowY)) return el
+    el = el.parentElement
+  }
+  return document.scrollingElement as HTMLElement | null
+}
+
+function isNearBottom() {
+  const el = getScrollParent()
+  return !el || el.scrollHeight - el.scrollTop - el.clientHeight < 150
+}
+
+function scrollToBottom(smooth = true) {
+  const run = () => {
+    const el = getScrollParent()
+    el?.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' })
+  }
+  nextTick(() => {
+    run()
+    if (!smooth) requestAnimationFrame(() => setTimeout(run, 50))
+  })
+}
+
+watch(() => messages.value.length, (length, oldLength) => {
+  if (!oldLength) return scrollToBottom(false)
+  if (messages.value.at(-1)?.role === 'assistant') return scrollToBottom(false)
+  if (isNearBottom()) scrollToBottom()
 })
 
 const { data: readers } = useGetConversationReaders(id)
@@ -208,19 +255,24 @@ watch([() => lastMessage.value?.id, visibility], ([lastId, state]) => {
           :messages="messages as UIMessage[]"
           class="pt-(--ui-header-height)"
           :spacing-offset="160"
-          :assistant="{ side: 'right', variant: 'soft' }"
-          :user="{ side: 'left', variant: 'outline' }"
         >
-          <template #header="{ message }">
-            <NuxtTime
-              :datetime="(message as any).date"
-              time-style="short"
-              class="text-xs text-gray-400"
-            />
-          </template>
+          <template v-for="message in messages" :key="message.id">
+            <p v-if="message.separator" class="text-center text-xs text-dimmed">
+              {{ message.separator }}
+            </p>
 
-          <template #content="{ message }">
-            <ChatMessageMedia :message="(message as any).raw" />
+            <UChatMessage
+              :id="message.id"
+              :role="message.role"
+              :parts="message.parts"
+              :avatar="message.avatar"
+              :side="message.role === 'assistant' ? 'right' : 'left'"
+              :variant="message.role === 'assistant' ? 'soft' : 'outline'"
+            >
+              <template #content>
+                <ChatMessageMedia :message="message.raw" />
+              </template>
+            </UChatMessage>
           </template>
         </UChatMessages>
 
@@ -294,8 +346,6 @@ watch([() => lastMessage.value?.id, visibility], ([lastId, state]) => {
             >
           </template>
 
-          <!-- type=button + click: UChatPrompt drops submits with empty text,
-               but a file can be sent without text. -->
           <UChatPromptSubmit
             type="button"
             color="neutral"

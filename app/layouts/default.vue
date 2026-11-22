@@ -3,6 +3,8 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 import { useAuthMe } from '~/composables/useAuth'
 import { useDeleteConversationById, useGetConversations } from '~/composables/useConversation'
 import { useAssignAlerts } from '~/composables/useAssignAlerts'
+import { useUnreadCounts } from '~/composables/useConversationRead'
+import { isSuperAdmin } from '~/composables/useUser'
 
 const sidebarOpen = ref(false)
 const collapsed = ref(false)
@@ -15,17 +17,25 @@ const { data: me, isPending: mp } = useAuthMe()
 const { mutate } = useDeleteConversationById()
 
 useAssignAlerts()
+const { unreadById } = useUnreadCounts()
 
-const items = computed(() => (conversations.value?.data ?? []).map(c => ({
-  id: c.id,
-  label: c.contact.displayName,
-  description: messagePreview(c.lastMessage),
-  senderType: c.lastMessage.senderType === 'admin' ? 'You' : '',
-  to: `/chat/${c.id}`,
-  avatar: { src: c.contact.pictureUrl, alt: c.contact.displayName },
-  lastTimestamp: c.lastMessage.timestamp,
-  slot: 'chat' as const
-})))
+const items = computed(() => (conversations.value?.data ?? []).map((c) => {
+  const unreadCount = unreadById.value.get(c.id) ?? 0
+  return {
+    id: c.id,
+    unread: unreadCount > 0,
+    manyUnread: unreadCount > 1,
+    label: c.contact.displayName,
+    description: unreadCount > 1
+      ? `${unreadCount > 9 ? '9+' : unreadCount} new messages`
+      : messageLogText(c.lastMessage),
+    senderType: unreadCount <= 1 && c.lastMessage.senderType === 'admin' ? 'You' : '',
+    to: `/chat/${c.id}`,
+    avatar: { src: c.contact.pictureUrl, alt: c.contact.displayName },
+    lastTimestamp: c.lastMessage.timestamp,
+    slot: 'chat' as const
+  }
+}))
 
 const chatMenuUi = computed(() => ({
   link: collapsed.value ? 'overflow-hidden py-1.5 justify-center' : 'overflow-hidden pr-7.5 py-1.5',
@@ -100,7 +110,12 @@ function confirmDeleteButton() {
               label: 'Logs',
               icon: 'i-lucide-hard-drive',
               to: '/log'
-            }
+            },
+            ...(isSuperAdmin(me) ? [{
+              label: 'New admin',
+              icon: 'i-lucide-user-plus',
+              to: '/admins'
+            }] : [])
           ]"
           :collapsed="collapsed"
           orientation="vertical"
@@ -143,20 +158,29 @@ function confirmDeleteButton() {
           :ui="chatMenuUi"
         >
           <template #chat-label="{ item }">
-            <div v-if="!collapsed" class="flex flex-col overflow-hidden">
-              <span class="truncate">{{ item.label }}</span>
+            <div v-if="!collapsed" class="flex flex-1 items-center gap-2 overflow-hidden">
+              <div class="flex flex-1 flex-col overflow-hidden">
+                <span class="truncate" :class="item.unread && 'font-semibold text-highlighted'">{{ item.label }}</span>
 
-              <div class="block">
-                <span v-if="item.senderType" class="truncate text-bold text-xs">
-                  {{ item.senderType }}:
-                </span>
-                <span v-if="item.description" class="truncate text-dimmed text-xs">
-                  {{ item.description }} ·
-                  <NuxtTime
-                    :datetime="item.lastTimestamp"
-                    relative
-                  />
-                </span>
+                <div class="block">
+                  <span v-if="item.senderType" class="truncate text-bold text-xs">
+                    {{ item.senderType }}:
+                  </span>
+                  <span
+                    v-if="item.description"
+                    class="truncate text-xs"
+                    :class="item.unread ? 'font-semibold text-highlighted' : 'text-dimmed'"
+                  >
+                    {{ item.description }}
+                    <template v-if="!item.manyUnread">
+                      ·
+                      <NuxtTime
+                        :datetime="item.lastTimestamp"
+                        relative
+                      />
+                    </template>
+                  </span>
+                </div>
               </div>
             </div>
           </template>

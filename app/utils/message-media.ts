@@ -20,35 +20,19 @@ export function isAcceptedFile(file: File, accept: string): boolean {
   return accept.split(',').includes(ext)
 }
 
-/** One-line text for chat lists / logs. */
-export function messagePreview(msg: { messageType?: MessageType | null, content?: string | null }): string {
-  switch (msg.messageType) {
-    case 'image': return '📷 Photo'
-    case 'video': return '🎬 Video'
-    case 'audio': return '🎵 Voice message'
-    case 'sticker': return '😊 Sticker'
-    case 'file': return `📎 ${msg.content || 'File'}`
-    default: return msg.content ?? ''
-  }
-}
-
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
-/**
- * Text for logs/tables: the message text, or for attachments a label plus the
- * file name ("📷 Photo: shop.png"). Falls back to the stored file name when
- * the original name is unknown (older messages, customer photos).
- */
+
 export function messageLogText(msg: { messageType?: MessageType | null, content?: string | null, file?: StoredFile | null }): string {
   const type = msg.messageType ?? 'text'
   if (type === 'text') return msg.content ?? ''
   if (type === 'sticker') return '😊 Sticker'
 
-  const label = { image: '📷 Photo', video: '🎬 Video', audio: '🎵 Audio', file: '📎 File' }[type]
   const name = msg.content || (msg.file ? getFileName(msg.file.path) : '')
-  return name ? `${label}: ${name}` : label
+  if (type === 'file') return name || 'File'
+  return name
 }

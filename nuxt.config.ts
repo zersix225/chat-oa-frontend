@@ -31,7 +31,9 @@ export default defineNuxtConfig({
     '/chat': { ssr: false },
     '/chat/**': { ssr: false },
     '/log': { ssr: false },
-    '/log/**': { ssr: false }
+    '/log/**': { ssr: false },
+    '/admins': { ssr: false },
+    '/admins/**': { ssr: false }
   },
 
   devServer: {
