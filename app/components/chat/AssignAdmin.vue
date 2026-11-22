@@ -40,7 +40,6 @@ const groups = computed(() => {
       label: t('assign.admins'),
       items: (admins.value?.data ?? []).map(admin => ({
         label: userDisplayName(admin),
-        suffix: admin.email ?? undefined,
         avatar: { src: admin.photo?.path, alt: userDisplayName(admin) },
         active: admin.id === assigneeId.value,
         trailingIcon: admin.id === assigneeId.value ? 'i-lucide-check' : undefined,
@@ -62,7 +61,7 @@ function select(id: number | null) {
     <UButton
       color="neutral"
       variant="ghost"
-      size="sm"
+      size="md"
       :loading="assigning"
       :avatar="assignee ? { src: assignee.photo?.path, alt: userDisplayName(assignee) } : undefined"
       :icon="assignee ? undefined : 'i-lucide-user-round-plus'"
